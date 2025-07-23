@@ -4,6 +4,9 @@ export interface User {
   password?: string; // Optional for responses (don't send password to frontend)
   first_name?: string;
   last_name?: string;
+  pin_hash?: string;
+  pin_enabled?: boolean;
+  pinEnabled?: boolean; // For frontend compatibility
   created_at?: string;
   updated_at?: string;
 }
@@ -64,6 +67,16 @@ export interface RecurringTransaction {
   is_active: boolean;
   created_at?: string;
   updated_at?: string;
+}
+
+export interface TrustedDevice {
+  id: number;
+  user_id: number;
+  device_fingerprint: string;
+  device_name?: string;
+  last_used: string;
+  created_at: string;
+  expires_at: string;
 }
 
 export interface DashboardStats {

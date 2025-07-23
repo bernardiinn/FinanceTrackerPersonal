@@ -33,7 +33,11 @@ export const authService = {
   },
 
   // Log in user
-  async login(credentials: { email: string; password: string }): Promise<AuthResponse> {
+  async login(credentials: { 
+    email: string; 
+    password: string; 
+    rememberMe?: boolean; 
+  }): Promise<AuthResponse> {
     const response = await fetch(`${API_BASE_URL}/login`, {
       method: 'POST',
       ...apiConfig,
@@ -86,6 +90,100 @@ export const authService = {
     } catch {
       return false;
     }
+  },
+
+  // Set up PIN for quick access
+  async setupPin(pin: string): Promise<{ message: string }> {
+    const response = await fetch(`${API_BASE_URL}/setup-pin`, {
+      method: 'POST',
+      ...apiConfig,
+      body: JSON.stringify({ pin }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to set up PIN');
+    }
+
+    return response.json();
+  },
+
+  // Login with PIN
+  async loginWithPin(pin: string, deviceFingerprint: string): Promise<AuthResponse> {
+    const response = await fetch(`${API_BASE_URL}/login-pin`, {
+      method: 'POST',
+      ...apiConfig,
+      body: JSON.stringify({ pin, deviceFingerprint }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'PIN login failed');
+    }
+
+    return response.json();
+  },
+
+  // Trust current device
+  async trustDevice(deviceFingerprint: string, deviceName?: string): Promise<{ message: string }> {
+    const response = await fetch(`${API_BASE_URL}/trust-device`, {
+      method: 'POST',
+      ...apiConfig,
+      body: JSON.stringify({ deviceFingerprint, deviceName }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to trust device');
+    }
+
+    return response.json();
+  },
+
+  // Get trusted devices
+  async getTrustedDevices(): Promise<{ devices: any[] }> {
+    const response = await fetch(`${API_BASE_URL}/trusted-devices`, {
+      method: 'GET',
+      ...apiConfig,
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to get trusted devices');
+    }
+
+    return response.json();
+  },
+
+  // Remove trusted device
+  async removeTrustedDevice(deviceId: number): Promise<{ message: string }> {
+    const response = await fetch(`${API_BASE_URL}/remove-device`, {
+      method: 'POST',
+      ...apiConfig,
+      body: JSON.stringify({ deviceId }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to remove device');
+    }
+
+    return response.json();
+  },
+
+  // Disable PIN
+  async disablePin(): Promise<{ message: string }> {
+    const response = await fetch(`${API_BASE_URL}/disable-pin`, {
+      method: 'POST',
+      ...apiConfig,
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to disable PIN');
+    }
+
+    return response.json();
   },
 };
 

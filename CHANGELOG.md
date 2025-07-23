@@ -5,6 +5,127 @@ A full-stack personal finance management application built with React, TypeScrip
 
 ---
 
+## 🔐 **Version 1.3.0 - Remember Me & PIN Login System**
+**Released: July 23, 2025**
+
+### **🚀 Major Features Added**
+
+#### **Extended Session Management**
+- **"Remember Me" Functionality**: Added checkbox on login form for 30-day sessions
+- **Session Duration Control**: Sessions extend from 1 day to 30 days when Remember Me is checked
+- **Persistent Login State**: Users stay logged in across browser sessions
+
+#### **PIN-Based Quick Access**
+- **4-Digit PIN Setup**: Users can set up secure 4-digit PINs for quick authentication
+- **Device Trust System**: PIN login only works on explicitly trusted devices
+- **Device Fingerprinting**: Unique device identification using browser characteristics
+- **Quick Login**: Users can log in with just PIN on trusted devices
+
+#### **Device Management System**
+- **Trusted Device Tracking**: Complete device management with automatic expiration
+- **30-Day Device Trust**: Devices automatically untrusted after 30 days of inactivity
+- **Device Removal**: Users can manually remove trusted devices
+- **Security Audit Trail**: Track device usage with last_used timestamps
+
+### **🛠️ Backend Enhancements**
+
+#### **Database Schema Updates**
+- **Users Table Extensions**:
+  - Added `pin_hash` column for bcrypt-hashed PINs
+  - Added `pin_enabled` boolean flag
+- **New Trusted Devices Table**:
+  ```sql
+  CREATE TABLE trusted_devices (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    device_fingerprint TEXT NOT NULL,
+    device_name TEXT,
+    last_used DATETIME DEFAULT CURRENT_TIMESTAMP,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    expires_at DATETIME NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+    UNIQUE(user_id, device_fingerprint)
+  );
+  ```
+
+#### **New API Endpoints**
+- **Authentication Extensions**:
+  - `POST /api/auth/login` - Enhanced with `rememberMe` parameter
+  - `POST /api/auth/login-pin` - PIN-based login for trusted devices
+- **PIN Management**:
+  - `POST /api/auth/setup-pin` - Set up 4-digit PIN (requires auth)
+  - `POST /api/auth/disable-pin` - Disable PIN login (requires auth)
+- **Device Management**:
+  - `POST /api/auth/trust-device` - Mark current device as trusted (requires auth)
+  - `GET /api/auth/trusted-devices` - List user's trusted devices (requires auth)
+  - `POST /api/auth/remove-device` - Remove a trusted device (requires auth)
+
+#### **Security Implementations**
+- **PIN Security**: 4-digit PINs hashed using bcrypt with 12 salt rounds
+- **Database Migrations**: Added migration system for PIN and device support
+- **Query Optimization**: Fixed SELECT queries to use `allQuery` for multiple results
+
+### **🎨 Frontend Improvements**
+
+#### **Enhanced Login Experience**
+- **Updated LoginPage**: Added "Remember Me" checkbox with 30-day indication
+- **PIN Login Section**: Conditional PIN input for trusted devices
+- **Improved UX**: Clear separation between email/password and PIN login
+- **Error Handling**: Enhanced error messages for PIN login failures
+
+#### **New Security Settings Page**
+- **Complete Security Management**: New `/security` route with comprehensive settings
+- **PIN Management Interface**: Set up, disable, and manage PIN settings
+- **Device Management UI**: View, trust, and remove devices with detailed information
+- **Responsive Design**: Works on mobile, tablet, and desktop
+
+#### **Navigation & Responsiveness**
+- **Responsive Navbar**: Fixed overflow issues on mobile/tablet/desktop
+- **Smart Navigation Layout**:
+  - **Mobile (< md)**: Hamburger menu with slide-out panel
+  - **Tablet (md-lg)**: Primary items (Dashboard, Expenses, Income, Goals) visible + "More" dropdown for secondary items (Loans, Recurring, Security)
+  - **Desktop (lg+)**: All navigation items visible horizontally with full labels
+- **Progressive Enhancement**: Icons-only on tablet, full labels on desktop
+- **Improved Mobile Menu**: Now hidden on tablet sizes to prevent overflow
+- **Better Icon Usage**: Added proper more/overflow icon (MdMoreHoriz)
+
+#### **Component Architecture**
+- **Enhanced AuthContext**: Added PIN and device management methods
+- **Device Fingerprinting Utility**: Browser-based device identification
+- **Type Safety**: Updated TypeScript interfaces for new features
+- **Error Boundaries**: Improved error handling throughout
+
+### **🌐 Localization Updates**
+- **New Navigation Items**: Added "Security" to EN/PT locale files
+- **Multilingual Support**: Security settings available in English and Portuguese
+
+### **🐛 Bug Fixes**
+- **Array Mapping Error**: Fixed `trustedDevices.map is not a function` error
+- **API Response Handling**: Added proper array safety checks
+- **Database Query Issues**: Fixed SELECT queries for multiple results
+- **CSS Conflicts**: Resolved conflicting Tailwind classes in navigation
+
+### **📋 Migration Notes**
+- **Database**: Automatic migration adds PIN columns and trusted_devices table
+- **Session Cookies**: Existing sessions remain 1-day unless "Remember Me" is used
+- **Device Trust**: Users need to explicitly trust devices for PIN login
+- **PIN Setup**: Optional feature - users can continue with traditional login
+
+### **🎯 Use Cases Solved**
+- **Family Device Sharing**: Perfect for shared devices like "mom's phone"
+- **Quick Access**: 4-digit PIN instead of typing full email/password
+- **Security Balance**: Convenience without compromising security
+- **Device Management**: Full control over trusted device access
+
+---
+
+## 🔐 **Version 1.2.0 - User Isolation & VM Configuration**al Finance Manager - Development Changelog
+
+## Project Overview
+A full-stack personal finance management application built with React, TypeScript, Express.js, and SQLite.
+
+---
+
 ## � **Version 1.2.0 - User Isolation & VM Configuration**
 **Released: July 23, 2025**
 

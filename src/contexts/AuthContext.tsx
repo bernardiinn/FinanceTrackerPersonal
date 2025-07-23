@@ -2,12 +2,20 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import type { User } from '../types';
 import authService from '../services/auth';
+import { 
+  generateDeviceFingerprint, 
+  getDeviceName, 
+  isDeviceTrusted as checkDeviceTrusted, 
+  setDeviceTrusted, 
+  getStoredDeviceFingerprint 
+} from '../utils/deviceFingerprint';
 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
+  loginWithPin: (pin: string) => Promise<void>;
   signup: (userData: {
     email: string;
     password: string;
@@ -16,6 +24,9 @@ interface AuthContextType {
   }) => Promise<void>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
+  setupPin: (pin: string) => Promise<void>;
+  trustDevice: () => Promise<void>;
+  isDeviceTrusted: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -35,6 +46,7 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isDeviceTrusted, setIsDeviceTrustedState] = useState(checkDeviceTrusted());
 
   const checkAuth = async (): Promise<void> => {
     try {
@@ -49,12 +61,49 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const login = async (email: string, password: string): Promise<void> => {
+  const login = async (email: string, password: string, rememberMe?: boolean): Promise<void> => {
     try {
-      const response = await authService.login({ email, password });
+      const response = await authService.login({ email, password, rememberMe });
       setUser(response.user);
     } catch (error) {
       console.error('Login failed:', error);
+      throw error;
+    }
+  };
+
+  const loginWithPin = async (pin: string): Promise<void> => {
+    try {
+      const deviceFingerprint = getStoredDeviceFingerprint() || generateDeviceFingerprint();
+      const response = await authService.loginWithPin(pin, deviceFingerprint);
+      setUser(response.user);
+    } catch (error) {
+      console.error('PIN login failed:', error);
+      throw error;
+    }
+  };
+
+  const setupPin = async (pin: string): Promise<void> => {
+    try {
+      await authService.setupPin(pin);
+      // Update user to reflect PIN is now enabled
+      if (user) {
+        setUser({ ...user, pinEnabled: true });
+      }
+    } catch (error) {
+      console.error('Setup PIN failed:', error);
+      throw error;
+    }
+  };
+
+  const trustDevice = async (): Promise<void> => {
+    try {
+      const deviceFingerprint = generateDeviceFingerprint();
+      const deviceName = getDeviceName();
+      await authService.trustDevice(deviceFingerprint, deviceName);
+      setDeviceTrusted(true);
+      setIsDeviceTrustedState(true);
+    } catch (error) {
+      console.error('Trust device failed:', error);
       throw error;
     }
   };
@@ -95,9 +144,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isLoading,
     isAuthenticated: !!user,
     login,
+    loginWithPin,
     signup,
     logout,
     checkAuth,
+    setupPin,
+    trustDevice,
+    isDeviceTrusted,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -3,6 +3,7 @@ export interface User {
   email: string;
   first_name?: string;
   last_name?: string;
+  pinEnabled?: boolean;
   created_at?: string;
 }
 
@@ -85,6 +86,14 @@ export const EXPENSE_CATEGORIES: ExpenseCategory[] = [
   { name: 'Travel', color: '#14b8a6', icon: '✈️' },
   { name: 'Other', color: '#6b7280', icon: '📦' },
 ];
+
+export interface TrustedDevice {
+  id: number;
+  device_name?: string;
+  last_used: string;
+  created_at: string;
+  expires_at: string;
+}
 
 export const INCOME_CATEGORIES: ExpenseCategory[] = [
   { name: 'Salary', color: '#10b981', icon: '💼' },

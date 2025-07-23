@@ -23,8 +23,10 @@ app.use(session({
     secure: false, // Set to true in production with HTTPS
     httpOnly: true,
     sameSite: 'lax',
-    maxAge: 1000 * 60 * 60 * 24, // 1 day
-  }
+    maxAge: 1000 * 60 * 60 * 24, // 1 day (default, can be extended with rememberMe)
+  },
+  // Extend session on activity
+  rolling: true,
 }));
 
 // CORS configuration with credentials

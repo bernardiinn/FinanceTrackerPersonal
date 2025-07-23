@@ -10,6 +10,7 @@ import Income from './pages/Income';
 import Goals from './pages/Goals';
 import Loans from './pages/Loans';
 import Recurring from './pages/Recurring';
+import SecuritySettings from './pages/SecuritySettings';
 import LoginPage from './pages/auth/LoginPage';
 import SignupPage from './pages/auth/SignupPage';
 
@@ -35,6 +36,7 @@ function App() {
                     <Route path="/goals" element={<Goals />} />
                     <Route path="/loans" element={<Loans />} />
                     <Route path="/recurring" element={<Recurring />} />
+                    <Route path="/security" element={<SecuritySettings />} />
                   </Routes>
                 </Layout>
               </div>

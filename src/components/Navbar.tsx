@@ -13,7 +13,9 @@ import {
   MdLogout,
   MdCreditCard,
   MdMenu,
-  MdClose
+  MdClose,
+  MdSecurity,
+  MdMoreHoriz
 } from 'react-icons/md';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { useAuth } from '../contexts/AuthContext';
@@ -28,8 +30,10 @@ const Navbar: React.FC = () => {
   const { t } = useLocalization();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
 
   // Handle clicking outside the user menu and mobile menu
   useEffect(() => {
@@ -39,6 +43,9 @@ const Navbar: React.FC = () => {
       }
       if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target as Node)) {
         setShowMobileMenu(false);
+      }
+      if (moreMenuRef.current && !moreMenuRef.current.contains(event.target as Node)) {
+        setShowMoreMenu(false);
       }
     };
 
@@ -51,6 +58,7 @@ const Navbar: React.FC = () => {
   // Close mobile menu when route changes
   useEffect(() => {
     setShowMobileMenu(false);
+    setShowMoreMenu(false);
   }, [location.pathname]);
 
   const navigation = [
@@ -60,7 +68,12 @@ const Navbar: React.FC = () => {
     { name: t('navigation.goals'), href: '/goals', icon: <MdGpsFixed /> },
     { name: t('navigation.loans'), href: '/loans', icon: <MdAccountBalance /> },
     { name: t('navigation.recurring'), href: '/recurring', icon: <MdRefresh /> },
+    { name: t('navigation.security'), href: '/security', icon: <MdSecurity /> },
   ];
+
+  // Split navigation for responsive design
+  const primaryNavigation = navigation.slice(0, 4); // Dashboard, Expenses, Income, Goals
+  const secondaryNavigation = navigation.slice(4); // Loans, Recurring, Security
 
   const handleLogout = async () => {
     try {
@@ -93,9 +106,10 @@ const Navbar: React.FC = () => {
                   <span className="sm:hidden">FT</span>
                 </h1>
               </div>
-              {/* Desktop Navigation - Hidden on mobile */}
-              <div className="hidden lg:ml-6 lg:flex lg:space-x-8">
-                {navigation.map((item) => (
+              {/* Desktop Navigation - Responsive design */}
+              <div className="hidden md:ml-6 md:flex md:items-center md:space-x-4 lg:space-x-6">
+                {/* Primary navigation items - always visible on md+ */}
+                {primaryNavigation.map((item) => (
                   <Link
                     key={item.name}
                     to={item.href}
@@ -103,12 +117,66 @@ const Navbar: React.FC = () => {
                       location.pathname === item.href
                         ? 'border-primary-500 text-primary-600 dark:text-primary-400'
                         : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300'
-                    } inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors`}
+                    } inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors lg:px-2`}
                   >
-                    <span className="mr-2">{item.icon}</span>
-                    {item.name}
+                    <span className="mr-1 lg:mr-2">{item.icon}</span>
+                    <span className="hidden lg:block">{item.name}</span>
                   </Link>
                 ))}
+                
+                {/* Secondary navigation - "More" dropdown on tablet, full items on desktop */}
+                <div className="lg:hidden relative" ref={moreMenuRef}>
+                  <button
+                    onClick={() => setShowMoreMenu(!showMoreMenu)}
+                    className={`${
+                      secondaryNavigation.some(item => location.pathname === item.href)
+                        ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                        : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300'
+                    } inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors`}
+                  >
+                    <MdMoreHoriz className="mr-1" />
+                  </button>
+                  
+                  {showMoreMenu && (
+                    <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50">
+                      <div className="py-1">
+                        {secondaryNavigation.map((item) => (
+                          <Link
+                            key={item.name}
+                            to={item.href}
+                            onClick={() => setShowMoreMenu(false)}
+                            className={`${
+                              location.pathname === item.href
+                                ? 'bg-primary-50 dark:bg-primary-900 text-primary-700 dark:text-primary-300'
+                                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                            } flex items-center px-4 py-2 text-sm transition-colors`}
+                          >
+                            <span className="mr-3">{item.icon}</span>
+                            {item.name}
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Full secondary navigation for desktop */}
+                <div className="hidden lg:flex lg:space-x-6">
+                  {secondaryNavigation.map((item) => (
+                    <Link
+                      key={item.name}
+                      to={item.href}
+                      className={`${
+                        location.pathname === item.href
+                          ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                          : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300'
+                      } inline-flex items-center px-2 pt-1 border-b-2 text-sm font-medium transition-colors`}
+                    >
+                      <span className="mr-2">{item.icon}</span>
+                      {item.name}
+                    </Link>
+                  ))}
+                </div>
               </div>
             </div>
             
@@ -148,7 +216,7 @@ const Navbar: React.FC = () => {
                       </div>
                       <button
                         onClick={handleLogout}
-                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center"
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center"
                       >
                         <MdLogout className="mr-2" />
                         {t('navigation.signOut')}
@@ -161,7 +229,7 @@ const Navbar: React.FC = () => {
               {/* Mobile menu button */}
               <button
                 onClick={() => setShowMobileMenu(!showMobileMenu)}
-                className="sm:hidden p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                className="md:hidden p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
               >
                 {showMobileMenu ? <MdClose /> : <MdMenu />}
               </button>
@@ -172,7 +240,7 @@ const Navbar: React.FC = () => {
 
       {/* Mobile Slide-out Menu Overlay */}
       {showMobileMenu && (
-        <div className="fixed inset-0 z-40 sm:hidden">
+        <div className="fixed inset-0 z-40 md:hidden">
           <div className="fixed inset-0 bg-black bg-opacity-25" onClick={() => setShowMobileMenu(false)} />
         </div>
       )}
@@ -180,7 +248,7 @@ const Navbar: React.FC = () => {
       {/* Mobile Slide-out Menu */}
       <div
         ref={mobileMenuRef}
-        className={`fixed top-0 right-0 h-full w-80 max-w-sm bg-white dark:bg-gray-800 shadow-xl transform transition-transform duration-300 ease-in-out z-50 sm:hidden ${
+        className={`fixed top-0 right-0 h-full w-80 max-w-sm bg-white dark:bg-gray-800 shadow-xl transform transition-transform duration-300 ease-in-out z-50 md:hidden ${
           showMobileMenu ? 'translate-x-0' : 'translate-x-full'
         }`}
       >

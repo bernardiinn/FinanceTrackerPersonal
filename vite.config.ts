@@ -38,14 +38,16 @@ export default defineConfig({
     })
   ],
   server: {
+    host: '0.0.0.0',
+    port: 4173,
     proxy: {
       '/api': {
-        target: 'http://localhost:3001',
+        target: 'http://localhost:3003',
         changeOrigin: true,
         secure: false,
         configure: (proxy, _options) => {
           proxy.on('proxyReq', (proxyReq) => {
-            proxyReq.setHeader('Origin', 'http://localhost:5173');
+            proxyReq.setHeader('Origin', 'http://localhost:4173');
           });
         }
       }

@@ -12,7 +12,7 @@ import recurringTransactionRoutes from './routes/recurringTransactions';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3003;
 
 // Session configuration
 app.use(session({
@@ -29,7 +29,7 @@ app.use(session({
 
 // CORS configuration with credentials
 app.use(cors({
-  origin: 'http://localhost:5173', // Frontend URL
+  origin: 'http://0.0.0.0:4173', // Frontend URL for VM
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -64,9 +64,9 @@ const startServer = async (): Promise<void> => {
   try {
     await initializeDatabase();
     
-    app.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`);
-      console.log(`Health check: http://localhost:${PORT}/api/health`);
+    app.listen(Number(PORT), '0.0.0.0', () => {
+      console.log(`Server is running on http://0.0.0.0:${PORT}`);
+      console.log(`Health check: http://0.0.0.0:${PORT}/api/health`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);

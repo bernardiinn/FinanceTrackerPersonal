@@ -2,9 +2,17 @@ import { Request, Response } from 'express';
 import { runQuery, allQuery, getQuery } from '../database';
 import type { Goal } from '../models/types';
 
-export const getGoals = async (_req: Request, res: Response): Promise<void> => {
+export const getGoals = async (req: Request, res: Response): Promise<void> => {
   try {
-    const goals = await allQuery('SELECT * FROM goals ORDER BY created_at DESC');
+    if (!req.userId) {
+      res.status(401).json({ error: 'Authentication required' });
+      return;
+    }
+
+    const goals = await allQuery(
+      'SELECT * FROM goals WHERE user_id = ? ORDER BY created_at DESC',
+      [req.userId]
+    );
     res.json(goals);
   } catch (error) {
     console.error('Error fetching goals:', error);
@@ -14,6 +22,11 @@ export const getGoals = async (_req: Request, res: Response): Promise<void> => {
 
 export const createGoal = async (req: Request, res: Response): Promise<void> => {
   try {
+    if (!req.userId) {
+      res.status(401).json({ error: 'Authentication required' });
+      return;
+    }
+
     const { name, target_amount, current_amount = 0, deadline, category }: Partial<Goal> = req.body;
     
     if (!name || !target_amount || !category) {
@@ -24,11 +37,14 @@ export const createGoal = async (req: Request, res: Response): Promise<void> => 
     const id = Date.now().toString(36) + Math.random().toString(36).substr(2);
     
     await runQuery(
-      'INSERT INTO goals (id, name, target_amount, current_amount, deadline, category) VALUES (?, ?, ?, ?, ?, ?)',
-      [id, name, target_amount, current_amount, deadline || null, category]
+      'INSERT INTO goals (id, user_id, name, target_amount, current_amount, deadline, category) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [id, req.userId, name, target_amount, current_amount, deadline || null, category]
     );
     
-    const newGoal = await getQuery('SELECT * FROM goals WHERE id = ?', [id]);
+    const newGoal = await getQuery(
+      'SELECT * FROM goals WHERE id = ? AND user_id = ?',
+      [id, req.userId]
+    );
     res.status(201).json(newGoal);
   } catch (error) {
     console.error('Error creating goal:', error);

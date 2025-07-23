@@ -4,10 +4,15 @@ import type { Transaction } from '../models/types';
 
 export const getTransactions = async (req: Request, res: Response): Promise<void> => {
   try {
+    if (!req.userId) {
+      res.status(401).json({ error: 'Authentication required' });
+      return;
+    }
+
     const { type, category, dateFrom, dateTo } = req.query;
     
-    let sql = 'SELECT * FROM transactions WHERE 1=1';
-    const params: any[] = [];
+    let sql = 'SELECT * FROM transactions WHERE user_id = ?';
+    const params: any[] = [req.userId];
     
     if (type) {
       sql += ' AND type = ?';
@@ -41,8 +46,16 @@ export const getTransactions = async (req: Request, res: Response): Promise<void
 
 export const getTransaction = async (req: Request, res: Response): Promise<void> => {
   try {
+    if (!req.userId) {
+      res.status(401).json({ error: 'Authentication required' });
+      return;
+    }
+
     const { id } = req.params;
-    const transaction = await getQuery('SELECT * FROM transactions WHERE id = ?', [id]);
+    const transaction = await getQuery(
+      'SELECT * FROM transactions WHERE id = ? AND user_id = ?',
+      [id, req.userId]
+    );
     
     if (!transaction) {
       res.status(404).json({ error: 'Transaction not found' });
@@ -58,6 +71,11 @@ export const getTransaction = async (req: Request, res: Response): Promise<void>
 
 export const createTransaction = async (req: Request, res: Response): Promise<void> => {
   try {
+    if (!req.userId) {
+      res.status(401).json({ error: 'Authentication required' });
+      return;
+    }
+
     const { amount, category, description, date, type, account_id }: Partial<Transaction> = req.body;
     
     if (!amount || !category || !description || !date || !type) {
@@ -68,11 +86,14 @@ export const createTransaction = async (req: Request, res: Response): Promise<vo
     const id = Date.now().toString(36) + Math.random().toString(36).substr(2);
     
     await runQuery(
-      'INSERT INTO transactions (id, amount, category, description, date, type, account_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [id, amount, category, description, date, type, account_id || null]
+      'INSERT INTO transactions (id, user_id, amount, category, description, date, type, account_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [id, req.userId, amount, category, description, date, type, account_id || null]
     );
     
-    const newTransaction = await getQuery('SELECT * FROM transactions WHERE id = ?', [id]);
+    const newTransaction = await getQuery(
+      'SELECT * FROM transactions WHERE id = ? AND user_id = ?',
+      [id, req.userId]
+    );
     res.status(201).json(newTransaction);
   } catch (error) {
     console.error('Error creating transaction:', error);
@@ -82,21 +103,32 @@ export const createTransaction = async (req: Request, res: Response): Promise<vo
 
 export const updateTransaction = async (req: Request, res: Response): Promise<void> => {
   try {
+    if (!req.userId) {
+      res.status(401).json({ error: 'Authentication required' });
+      return;
+    }
+
     const { id } = req.params;
     const { amount, category, description, date, type, account_id }: Partial<Transaction> = req.body;
     
-    const existingTransaction = await getQuery('SELECT * FROM transactions WHERE id = ?', [id]);
+    const existingTransaction = await getQuery(
+      'SELECT * FROM transactions WHERE id = ? AND user_id = ?',
+      [id, req.userId]
+    );
     if (!existingTransaction) {
       res.status(404).json({ error: 'Transaction not found' });
       return;
     }
     
     await runQuery(
-      'UPDATE transactions SET amount = ?, category = ?, description = ?, date = ?, type = ?, account_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-      [amount, category, description, date, type, account_id || null, id]
+      'UPDATE transactions SET amount = ?, category = ?, description = ?, date = ?, type = ?, account_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?',
+      [amount, category, description, date, type, account_id || null, id, req.userId]
     );
     
-    const updatedTransaction = await getQuery('SELECT * FROM transactions WHERE id = ?', [id]);
+    const updatedTransaction = await getQuery(
+      'SELECT * FROM transactions WHERE id = ? AND user_id = ?',
+      [id, req.userId]
+    );
     res.json(updatedTransaction);
   } catch (error) {
     console.error('Error updating transaction:', error);
@@ -106,15 +138,23 @@ export const updateTransaction = async (req: Request, res: Response): Promise<vo
 
 export const deleteTransaction = async (req: Request, res: Response): Promise<void> => {
   try {
+    if (!req.userId) {
+      res.status(401).json({ error: 'Authentication required' });
+      return;
+    }
+
     const { id } = req.params;
     
-    const existingTransaction = await getQuery('SELECT * FROM transactions WHERE id = ?', [id]);
+    const existingTransaction = await getQuery(
+      'SELECT * FROM transactions WHERE id = ? AND user_id = ?',
+      [id, req.userId]
+    );
     if (!existingTransaction) {
       res.status(404).json({ error: 'Transaction not found' });
       return;
     }
     
-    await runQuery('DELETE FROM transactions WHERE id = ?', [id]);
+    await runQuery('DELETE FROM transactions WHERE id = ? AND user_id = ?', [id, req.userId]);
     res.status(204).send();
   } catch (error) {
     console.error('Error deleting transaction:', error);

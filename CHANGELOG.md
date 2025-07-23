@@ -5,7 +5,73 @@ A full-stack personal finance management application built with React, TypeScrip
 
 ---
 
-## 🚀 **Session Summary: July 23, 2025**
+## � **Version 1.2.0 - User Isolation & VM Configuration**
+**Released: July 23, 2025**
+
+### **🚨 CRITICAL SECURITY FIXES**
+- **User Data Isolation**: Fixed major security vulnerability where users could see other users' data
+- **Database Schema Migration**: Added `user_id` foreign keys to all data tables
+- **Authentication Enforcement**: Implemented proper session-based authentication middleware
+
+### **🛠️ VM Environment Configuration**
+- **Port Configuration**: Updated to support VM deployment
+  - Frontend: `0.0.0.0:4173` (VM accessible)
+  - Backend: `0.0.0.0:3003` (VM accessible)
+- **CORS Updates**: Modified CORS settings for VM environment
+- **Startup Scripts**: Updated batch and shell scripts for VM deployment
+
+### **🔐 Backend Security Enhancements**
+- **Authentication Middleware**: 
+  - Created `middleware/auth.ts` with `requireAuth` and `optionalAuth` functions
+  - Extended Express Request interface to include user information
+- **Database Migration**: 
+  - Added `user_id` columns to all tables (accounts, transactions, goals, loans, recurring_transactions)
+  - Implemented foreign key constraints with CASCADE DELETE
+  - Added migration function for existing data
+
+### **🗄️ Controller Updates**
+- **All Controllers Now User-Scoped**:
+  - `RecurringTransactionController`: All operations filtered by user ID
+  - `TransactionController`: Proper user isolation for all transactions
+  - `GoalController`: Goals are now user-specific
+  - `LoanController`: Loan data isolated per user
+- **Enhanced Security**: Authentication checks on all protected endpoints
+
+### **🛣️ Route Enhancements**
+- **Middleware Integration**: All protected routes now use `requireAuth` middleware
+- **Consistent Error Handling**: Standardized 401 responses for unauthenticated requests
+- **Type Safety**: Improved TypeScript definitions for authenticated requests
+
+### **📝 Translation System Enhancements**
+- **Complete UI Translation**: All user-facing strings now use i18next
+- **Enhanced Detection Script**: Advanced regex patterns for comprehensive string detection
+- **Priority Classification**: High/Medium/Low severity levels for translation requirements
+
+### **🚀 Deployment Improvements**
+- **VM Startup Scripts**: 
+  - `start-vm.bat` for Windows VM environments
+  - `start-vm.sh` for Linux/Unix VM environments
+- **Configuration Documentation**: Comprehensive VM setup guide in `VM-SETUP.md`
+- **Port Standardization**: Consistent port usage across all configuration files
+
+### **📋 Files Modified**
+- `backend/src/database/index.ts` - Database schema migration
+- `backend/src/middleware/auth.ts` - New authentication middleware
+- `backend/src/controllers/*.ts` - User isolation for all controllers
+- `backend/src/routes/*.ts` - Authentication middleware integration
+- `vite.config.ts` - VM port configuration
+- `backend/.env` - Port update to 3003
+- `start-dev.bat` - Updated port references
+
+### **🔍 Testing Required**
+- [ ] Verify user data isolation between accounts
+- [ ] Test VM accessibility from host machine
+- [ ] Validate authentication flows
+- [ ] Confirm database migration success
+
+---
+
+## �🚀 **Session Summary: July 23, 2025**
 
 ### **Phase 1: Project Scaffolding & Setup**
 - ✅ **Frontend Foundation**: Created Vite + React + TypeScript project

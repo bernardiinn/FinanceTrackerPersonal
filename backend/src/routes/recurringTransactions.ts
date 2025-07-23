@@ -5,7 +5,7 @@ import {
   updateRecurringTransaction,
   deleteRecurringTransaction
 } from '../controllers/recurringTransactionController';
-import { requireAuth } from '../controllers/authController';
+import { requireAuth } from '../middleware/auth';
 
 const router = Router();
 

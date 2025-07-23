@@ -6,7 +6,7 @@ import {
   updateTransaction,
   deleteTransaction
 } from '../controllers/transactionController';
-import { requireAuth } from '../controllers/authController';
+import { requireAuth } from '../middleware/auth';
 
 const router = Router();
 

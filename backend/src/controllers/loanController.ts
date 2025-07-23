@@ -2,9 +2,17 @@ import { Request, Response } from 'express';
 import { runQuery, getQuery, allQuery } from '../database';
 import type { Loan } from '../models/types';
 
-export const getLoans = async (_req: Request, res: Response): Promise<void> => {
+export const getLoans = async (req: Request, res: Response): Promise<void> => {
   try {
-    const loans = await allQuery('SELECT * FROM loans ORDER BY created_at DESC');
+    if (!req.userId) {
+      res.status(401).json({ error: 'Authentication required' });
+      return;
+    }
+
+    const loans = await allQuery(
+      'SELECT * FROM loans WHERE user_id = ? ORDER BY created_at DESC',
+      [req.userId]
+    );
     res.json(loans);
   } catch (error) {
     console.error('Error fetching loans:', error);
@@ -14,6 +22,11 @@ export const getLoans = async (_req: Request, res: Response): Promise<void> => {
 
 export const createLoan = async (req: Request, res: Response): Promise<void> => {
   try {
+    if (!req.userId) {
+      res.status(401).json({ error: 'Authentication required' });
+      return;
+    }
+
     const { name, total_amount, remaining_amount, interest_rate, monthly_payment, next_payment_date, type }: Partial<Loan> = req.body;
     
     if (!name || !total_amount || !remaining_amount || !monthly_payment || !next_payment_date || !type) {
@@ -24,11 +37,14 @@ export const createLoan = async (req: Request, res: Response): Promise<void> => 
     const id = Date.now().toString(36) + Math.random().toString(36).substr(2);
     
     await runQuery(
-      'INSERT INTO loans (id, name, total_amount, remaining_amount, interest_rate, monthly_payment, next_payment_date, type) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [id, name, total_amount, remaining_amount, interest_rate || 0, monthly_payment, next_payment_date, type]
+      'INSERT INTO loans (id, user_id, name, total_amount, remaining_amount, interest_rate, monthly_payment, next_payment_date, type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [id, req.userId, name, total_amount, remaining_amount, interest_rate || 0, monthly_payment, next_payment_date, type]
     );
     
-    const newLoan = await getQuery('SELECT * FROM loans WHERE id = ?', [id]);
+    const newLoan = await getQuery(
+      'SELECT * FROM loans WHERE id = ? AND user_id = ?',
+      [id, req.userId]
+    );
     res.status(201).json(newLoan);
   } catch (error) {
     console.error('Error creating loan:', error);

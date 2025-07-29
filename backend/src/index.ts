@@ -8,6 +8,7 @@ import authRoutes from './routes/auth';
 import goalRoutes from './routes/goals';
 import loanRoutes from './routes/loans';
 import recurringTransactionRoutes from './routes/recurringTransactions';
+import receiptRoutes from './routes/receipts';
 
 dotenv.config();
 
@@ -45,6 +46,7 @@ app.use('/api/transactions', transactionRoutes);
 app.use('/api/goals', goalRoutes);
 app.use('/api/loans', loanRoutes);
 app.use('/api/recurring-transactions', recurringTransactionRoutes);
+app.use('/api/receipts', receiptRoutes);
 
 // Health check endpoint
 app.get('/api/health', (_req, res) => {

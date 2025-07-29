@@ -216,7 +216,10 @@
     "lastNameOptional": "Last name (optional)",
     "switchToDarkMode": "Switch to dark mode",
     "negativeCashFlow": "Negative cash flow",
-    "createPassword": "Create a password (min. 6 characters)"
+    "createPassword": "Create a password (min. 6 characters)",
+    "merchant": "Merchant",
+    "clear": "Clear",
+    "creating": "Creating..."
   },
   "errors": {
     "failedToLoad": "Failed to load",
@@ -245,5 +248,32 @@
     "failedToCreateRecurring": "Failed to create recurring transaction",
     "failedToUpdateRecurring": "Failed to update recurring transaction",
     "failedToDeleteRecurring": "Failed to delete recurring transaction"
+  },
+  "receipts": {
+    "uploadReceipt": "Upload Receipt",
+    "scanReceipt": "Scan Receipt",
+    "manualEntry": "Manual Entry",
+    "dropOrSelect": "Drop a receipt image here or click to select",
+    "supportedFormats": "Supports JPG, PNG, WebP (max 10MB)",
+    "selectFile": "Select File",
+    "processing": "Processing...",
+    "parseReceipt": "Parse Receipt",
+    "clear": "Clear",
+    "parsedData": "Parsed Receipt Data",
+    "extractedInfo": "Extracted Information",
+    "notDetected": "Not detected",
+    "otherAmounts": "Other amounts found",
+    "showRawText": "Show raw OCR text",
+    "hideRawText": "Hide raw OCR text",
+    "reviewAndEdit": "Review and Edit",
+    "merchantOrDescription": "Merchant or description",
+    "createExpense": "Create Expense",
+    "merchant": "Merchant",
+    "tips": {
+      "header": "Tips for better OCR results",
+      "clear": "Ensure the receipt is clear and well-lit",
+      "straight": "Keep the receipt straight and flat",
+      "lighting": "Avoid shadows and glare"
+    }
   }
 }

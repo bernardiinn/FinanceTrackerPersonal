@@ -15,6 +15,7 @@ A modern, full-stack personal finance management application built with React, T
 - Filter by category, date range
 - Visual expense breakdown
 - Support for multiple expense categories
+- **🆕 Receipt OCR**: Upload receipt images and automatically extract merchant, amount, and date using OCR technology
 
 ### 💰 Income Management
 - Log recurring and one-time income sources
@@ -61,12 +62,17 @@ A modern, full-stack personal finance management application built with React, T
 - **TypeScript** - Type-safe backend development
 - **SQLite** - Lightweight database with .db file storage
 - **CORS** - Cross-origin resource sharing
+- **Multer** - File upload handling
+- **Python OCR** - Receipt text extraction using pytesseract and OpenCV
 
 ## 🚀 Getting Started
 
 ### Prerequisites
 - Node.js (v18 or higher)
 - npm or yarn
+- **Python 3.7+** (for receipt OCR functionality)
+- **Python packages**: `pytesseract`, `opencv-python`
+- **System package**: `tesseract-ocr` (OCR engine)
 
 ### Installation
 
@@ -86,6 +92,19 @@ A modern, full-stack personal finance management application built with React, T
    cd backend
    npm install
    cd ..
+   ```
+
+4. **Setup Python OCR dependencies**
+   ```bash
+   # Install system OCR engine (macOS with Homebrew)
+   brew install tesseract
+   
+   # Install Python packages
+   pip3 install pytesseract opencv-python
+   
+   # For other systems:
+   # Ubuntu/Debian: sudo apt-get install tesseract-ocr
+   # Windows: Download from GitHub releases or use chocolatey
    ```
 
 ### Development
@@ -183,6 +202,10 @@ The SQLite database includes the following tables:
 - `POST /api/transactions` - Create new transaction
 - `PUT /api/transactions/:id` - Update transaction
 - `DELETE /api/transactions/:id` - Delete transaction
+
+### Receipt OCR
+- `POST /api/receipts/parse` - Upload and parse receipt image
+- `GET /api/receipts/health` - Check OCR system health
 
 ### Additional endpoints for goals, loans, and recurring transactions are available.
 

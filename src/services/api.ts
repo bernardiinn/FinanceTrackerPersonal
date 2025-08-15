@@ -1,4 +1,5 @@
 import type { Transaction, Account, Goal, Loan, RecurringTransaction, DashboardStats } from '../types';
+import { withCsrf } from './csrf.ts';
 
 const API_BASE_URL = '/api';
 
@@ -77,6 +78,7 @@ export const api = {
     const response = await fetch(`${API_BASE_URL}/transactions`, {
       method: 'POST',
       ...apiConfig,
+      headers: await withCsrf(apiConfig.headers),
       body: JSON.stringify(transaction),
     });
 
@@ -91,6 +93,7 @@ export const api = {
     const response = await fetch(`${API_BASE_URL}/transactions/${id}`, {
       method: 'PUT',
       ...apiConfig,
+      headers: await withCsrf(apiConfig.headers),
       body: JSON.stringify(transaction),
     });
 
@@ -105,6 +108,7 @@ export const api = {
     const response = await fetch(`${API_BASE_URL}/transactions/${id}`, {
       method: 'DELETE',
       ...apiConfig,
+      headers: await withCsrf(apiConfig.headers),
     });
 
     if (!response.ok) {
@@ -130,6 +134,7 @@ export const api = {
     const response = await fetch(`${API_BASE_URL}/accounts`, {
       method: 'POST',
       ...apiConfig,
+      headers: await withCsrf(apiConfig.headers),
       body: JSON.stringify(account),
     });
 
@@ -158,6 +163,7 @@ export const api = {
     const response = await fetch(`${API_BASE_URL}/goals`, {
       method: 'POST',
       ...apiConfig,
+      headers: await withCsrf(apiConfig.headers),
       body: JSON.stringify(goal),
     });
 
@@ -172,6 +178,7 @@ export const api = {
     const response = await fetch(`${API_BASE_URL}/goals/${id}`, {
       method: 'PUT',
       ...apiConfig,
+      headers: await withCsrf(apiConfig.headers),
       body: JSON.stringify(goal),
     });
 
@@ -200,6 +207,7 @@ export const api = {
     const response = await fetch(`${API_BASE_URL}/loans`, {
       method: 'POST',
       ...apiConfig,
+      headers: await withCsrf(apiConfig.headers),
       body: JSON.stringify(loan),
     });
 
@@ -214,6 +222,7 @@ export const api = {
     const response = await fetch(`${API_BASE_URL}/loans/${id}`, {
       method: 'PUT',
       ...apiConfig,
+      headers: await withCsrf(apiConfig.headers),
       body: JSON.stringify(loan),
     });
 
@@ -228,6 +237,7 @@ export const api = {
     const response = await fetch(`${API_BASE_URL}/loans/${id}`, {
       method: 'DELETE',
       ...apiConfig,
+      headers: await withCsrf(apiConfig.headers),
     });
 
     if (!response.ok) {
@@ -253,6 +263,7 @@ export const api = {
     const response = await fetch(`${API_BASE_URL}/recurring-transactions`, {
       method: 'POST',
       ...apiConfig,
+      headers: await withCsrf(apiConfig.headers),
       body: JSON.stringify(transaction),
     });
 
@@ -267,6 +278,7 @@ export const api = {
     const response = await fetch(`${API_BASE_URL}/recurring-transactions/${id}`, {
       method: 'PUT',
       ...apiConfig,
+      headers: await withCsrf(apiConfig.headers),
       body: JSON.stringify(transaction),
     });
 
@@ -281,11 +293,64 @@ export const api = {
     const response = await fetch(`${API_BASE_URL}/recurring-transactions/${id}`, {
       method: 'DELETE',
       ...apiConfig,
+      headers: await withCsrf(apiConfig.headers),
     });
 
     if (!response.ok) {
       throw new Error('Failed to delete recurring transaction');
     }
+  },
+
+  // Receipt OCR
+  async parseReceipt(file: File): Promise<{
+    success: boolean;
+    data?: {
+      merchant: string | null;
+      total: number | null;
+      date: string | null;
+      raw_text: string;
+      suggestions: {
+        all_amounts: number[];
+      };
+    };
+    error?: string;
+    details?: string;
+  }> {
+    const formData = new FormData();
+    formData.append('receipt', file);
+
+    const response = await fetch(`${API_BASE_URL}/receipts/parse`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: await withCsrf(),
+      body: formData, // Don't set Content-Type header, let browser set it with boundary
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Failed to parse receipt' }));
+      throw new Error(errorData.error || 'Failed to parse receipt');
+    }
+
+    return response.json();
+  },
+
+  async checkOcrHealth(): Promise<{
+    ocr_ready: boolean;
+    script_exists: boolean;
+    python_available: boolean;
+    packages_available: boolean;
+    requirements: string[];
+  }> {
+    const response = await fetch(`${API_BASE_URL}/receipts/health`, {
+      method: 'GET',
+      ...apiConfig,
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to check OCR health');
+    }
+
+    return response.json();
   },
 };
 

@@ -48,10 +48,18 @@ const Navbar: React.FC = () => {
         setShowMoreMenu(false);
       }
     };
-
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowUserMenu(false);
+        setShowMobileMenu(false);
+        setShowMoreMenu(false);
+      }
+    };
     document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', onKeyDown);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', onKeyDown);
     };
   }, []);
 
@@ -128,6 +136,9 @@ const Navbar: React.FC = () => {
                 <div className="lg:hidden relative" ref={moreMenuRef}>
                   <button
                     onClick={() => setShowMoreMenu(!showMoreMenu)}
+                    aria-haspopup="menu"
+                    aria-expanded={showMoreMenu}
+                    aria-label="More navigation"
                     className={`${
                       secondaryNavigation.some(item => location.pathname === item.href)
                         ? 'border-primary-500 text-primary-600 dark:text-primary-400'
@@ -138,8 +149,8 @@ const Navbar: React.FC = () => {
                   </button>
                   
                   {showMoreMenu && (
-                    <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50">
-                      <div className="py-1">
+                    <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50" role="menu" aria-label="More navigation menu">
+                      <div className="py-1" role="none">
                         {secondaryNavigation.map((item) => (
                           <Link
                             key={item.name}
@@ -150,6 +161,7 @@ const Navbar: React.FC = () => {
                                 ? 'bg-primary-50 dark:bg-primary-900 text-primary-700 dark:text-primary-300'
                                 : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                             } flex items-center px-4 py-2 text-sm transition-colors`}
+                            role="menuitem"
                           >
                             <span className="mr-3">{item.icon}</span>
                             {item.name}
@@ -198,6 +210,9 @@ const Navbar: React.FC = () => {
               <div className="hidden sm:block relative" ref={userMenuRef}>
                 <button
                   onClick={() => setShowUserMenu(!showUserMenu)}
+                  aria-haspopup="menu"
+                  aria-expanded={showUserMenu}
+                  aria-label="User menu"
                   className="flex items-center text-sm rounded-full bg-gray-100 dark:bg-gray-700 p-2 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                 >
                   <MdPerson className="mr-2" />
@@ -208,8 +223,8 @@ const Navbar: React.FC = () => {
                 </button>
 
                 {showUserMenu && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50">
-                    <div className="py-1">
+                  <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50" role="menu" aria-label="User menu">
+                    <div className="py-1" role="none">
                       <div className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700">
                         <p className="font-medium">{getUserDisplayName()}</p>
                         <p className="text-gray-500 dark:text-gray-400">{user?.email}</p>
@@ -217,6 +232,7 @@ const Navbar: React.FC = () => {
                       <button
                         onClick={handleLogout}
                         className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center"
+                        role="menuitem"
                       >
                         <MdLogout className="mr-2" />
                         {t('navigation.signOut')}

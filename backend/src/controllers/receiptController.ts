@@ -70,8 +70,8 @@ export const parseReceipt = async (req: Request, res: Response): Promise<void> =
       return;
     }
 
-    const imagePath = req.file.path;
-    const pythonScriptPath = path.join(__dirname, '../ocr/parseReceipt.py');
+  const imagePath = req.file.path;
+  const pythonScriptPath = path.join(__dirname, '../ocr/parseReceipt.py');
 
     try {
       // Check if Python script exists
@@ -80,15 +80,31 @@ export const parseReceipt = async (req: Request, res: Response): Promise<void> =
       }
 
       // Execute the Python OCR script
-      const pythonPath = path.join(__dirname, '../../../.venv/bin/python');
-      const { stdout, stderr } = await execAsync(`"${pythonPath}" "${pythonScriptPath}" "${imagePath}"`);
+      // Choose python path cross-platform: prefer project .venv, else fallback to system python
+      const venvPythonUnix = path.join(__dirname, '../../../.venv/bin/python');
+      const venvPythonWin = path.join(__dirname, '..', '..', '..', '.venv', 'Scripts', 'python.exe');
+      const isWindows = process.platform === 'win32';
+      const candidate = isWindows ? venvPythonWin : venvPythonUnix;
+      const pythonPath = fs.existsSync(candidate) ? candidate : (isWindows ? 'python' : 'python3');
+
+      // Execute with timeout and hidden window on Windows
+      const { stdout, stderr } = await execAsync(`"${pythonPath}" "${pythonScriptPath}" "${imagePath}"`, {
+        timeout: 30000,
+        windowsHide: true,
+        maxBuffer: 10 * 1024 * 1024,
+      });
       
       if (stderr) {
         console.warn('OCR Script stderr:', stderr);
       }
 
       // Parse the JSON output from Python script
-      const parsedData: ParsedReceiptData = JSON.parse(stdout);
+      let parsedData: ParsedReceiptData;
+      try {
+        parsedData = JSON.parse(stdout);
+      } catch (e) {
+        throw new Error('Invalid OCR output format');
+      }
 
       // Clean up the uploaded file
       try {
@@ -131,10 +147,11 @@ export const parseReceipt = async (req: Request, res: Response): Promise<void> =
         console.warn('Failed to cleanup uploaded file:', cleanupError);
       }
 
+      const isTimeout = execError?.killed || /ETIME|timed out/i.test(execError?.message || '');
       res.status(500).json({
-        error: 'Failed to process receipt image',
+        error: isTimeout ? 'OCR timed out' : 'Failed to process receipt image',
         details: execError.message,
-        suggestion: 'Please ensure the image is clear and contains text'
+        suggestion: isTimeout ? 'Try a smaller or clearer image' : 'Please ensure the image is clear and contains text'
       });
     }
 

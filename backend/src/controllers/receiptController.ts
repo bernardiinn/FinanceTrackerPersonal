@@ -9,7 +9,7 @@ const execAsync = promisify(exec);
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
+  destination: (_req: Request, _file: any, cb: (error: Error | null, destination: string) => void) => {
     const uploadDir = path.join(__dirname, '../uploads/receipts');
     
     // Create directory if it doesn't exist
@@ -19,7 +19,7 @@ const storage = multer.diskStorage({
     
     cb(null, uploadDir);
   },
-  filename: (_req, file, cb) => {
+  filename: (_req: Request, file: any, cb: (error: Error | null, filename: string) => void) => {
     // Generate unique filename
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     const extension = path.extname(file.originalname);
@@ -28,7 +28,7 @@ const storage = multer.diskStorage({
 });
 
 // File filter to only allow images
-const fileFilter = (_req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+const fileFilter = (_req: any, file: any, cb: multer.FileFilterCallback) => {
   const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
   
   if (allowedTypes.includes(file.mimetype)) {
@@ -65,12 +65,12 @@ export const parseReceipt = async (req: Request, res: Response): Promise<void> =
       return;
     }
 
-    if (!req.file) {
+  const uploaded = (req as any).file as any | undefined;
+    if (!uploaded) {
       res.status(400).json({ error: 'No receipt image provided' });
       return;
     }
-
-  const imagePath = req.file.path;
+  const imagePath = uploaded.path;
   const pythonScriptPath = path.join(__dirname, '../ocr/parseReceipt.py');
 
     try {
@@ -159,9 +159,10 @@ export const parseReceipt = async (req: Request, res: Response): Promise<void> =
     console.error('Error in parseReceipt controller:', error);
     
     // Clean up uploaded file if it exists
-    if (req.file && req.file.path) {
+  const uploaded = (req as any).file as any | undefined;
+  if (uploaded && uploaded.path) {
       try {
-        fs.unlinkSync(req.file.path);
+    fs.unlinkSync(uploaded.path);
       } catch (cleanupError) {
         console.warn('Failed to cleanup uploaded file:', cleanupError);
       }

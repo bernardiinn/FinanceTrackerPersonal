@@ -48,7 +48,8 @@ export const authService = {
   }): Promise<AuthResponse> {
     const response = await fetch(`${API_BASE_URL}/signup`, {
       method: 'POST',
-      ...apiConfig,
+      credentials: 'include',
+      headers: createHeaders(),
       body: JSON.stringify(userData),
     });
 
@@ -85,7 +86,8 @@ export const authService = {
   async logout(): Promise<{ message: string }> {
     const response = await fetch(`${API_BASE_URL}/logout`, {
       method: 'POST',
-      ...apiConfig,
+      credentials: 'include',
+      headers: createHeaders(),
     });
 
     if (!response.ok) {
@@ -125,7 +127,8 @@ export const authService = {
   async setupPin(pin: string): Promise<{ message: string }> {
     const response = await fetch(`${API_BASE_URL}/setup-pin`, {
       method: 'POST',
-      ...apiConfig,
+      credentials: 'include',
+      headers: createHeaders(),
       body: JSON.stringify({ pin }),
     });
 
@@ -141,7 +144,8 @@ export const authService = {
   async loginWithPin(pin: string, deviceFingerprint: string): Promise<AuthResponse> {
     const response = await fetch(`${API_BASE_URL}/login-pin`, {
       method: 'POST',
-      ...apiConfig,
+      credentials: 'include',
+      headers: createHeaders(),
       body: JSON.stringify({ pin, deviceFingerprint }),
     });
 
@@ -157,7 +161,8 @@ export const authService = {
   async trustDevice(deviceFingerprint: string, deviceName?: string): Promise<{ message: string }> {
     const response = await fetch(`${API_BASE_URL}/trust-device`, {
       method: 'POST',
-      ...apiConfig,
+      credentials: 'include',
+      headers: createHeaders(),
       body: JSON.stringify({ deviceFingerprint, deviceName }),
     });
 
@@ -188,7 +193,8 @@ export const authService = {
   async removeTrustedDevice(deviceId: number): Promise<{ message: string }> {
     const response = await fetch(`${API_BASE_URL}/remove-device`, {
       method: 'POST',
-      ...apiConfig,
+      credentials: 'include',
+      headers: createHeaders(),
       body: JSON.stringify({ deviceId }),
     });
 
@@ -204,7 +210,8 @@ export const authService = {
   async disablePin(): Promise<{ message: string }> {
     const response = await fetch(`${API_BASE_URL}/disable-pin`, {
       method: 'POST',
-      ...apiConfig,
+      credentials: 'include',
+      headers: createHeaders(),
     });
 
     if (!response.ok) {

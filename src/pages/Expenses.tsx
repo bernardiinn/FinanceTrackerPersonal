@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { MdAdd, MdDelete, MdTrendingDown } from 'react-icons/md';
+import { MdAdd, MdDelete, MdTrendingDown, MdReceipt } from 'react-icons/md';
 import type { Transaction } from '../types';
 import { EXPENSE_CATEGORIES } from '../types';
 import api from '../services/api';
 import { useLocalization } from '../hooks/useLocalization';
+import ReceiptUpload from '../components/ReceiptUpload';
+import ReceiptParser from '../components/ReceiptParser';
 
 interface ExpenseFormData {
   amount: string;
@@ -16,6 +18,18 @@ interface ExpenseFilter {
   category: string;
   startDate: string;
   endDate: string;
+}
+
+type ViewMode = 'form' | 'receipt-upload' | 'receipt-parse';
+
+interface ParsedReceiptData {
+  merchant: string | null;
+  total: number | null;
+  date: string | null;
+  raw_text: string;
+  suggestions: {
+    all_amounts: number[];
+  };
 }
 
 const Expenses: React.FC = () => {
@@ -34,6 +48,12 @@ const Expenses: React.FC = () => {
     startDate: '',
     endDate: ''
   });
+
+  // Receipt upload states
+  const [viewMode, setViewMode] = useState<ViewMode>('form');
+  const [isProcessingReceipt, setIsProcessingReceipt] = useState(false);
+  const [parsedData, setParsedData] = useState<ParsedReceiptData | null>(null);
+  const [isCreatingFromReceipt, setIsCreatingFromReceipt] = useState(false);
 
   useEffect(() => {
     const fetchExpenses = async () => {
@@ -92,6 +112,53 @@ const Expenses: React.FC = () => {
       console.error('Failed to delete expense:', err);
       setError('Failed to delete expense');
     }
+  };
+
+  // Receipt upload handlers
+  const handleReceiptUpload = async (file: File) => {
+    setIsProcessingReceipt(true);
+    setError(null);
+
+    try {
+      const result = await api.parseReceipt(file);
+      
+      if (result.success && result.data) {
+        setParsedData(result.data);
+        setViewMode('receipt-parse');
+      } else {
+        setError(result.error || 'Failed to parse receipt');
+      }
+    } catch (err: any) {
+      console.error('Failed to parse receipt:', err);
+      setError(err.message || 'Failed to parse receipt');
+    } finally {
+      setIsProcessingReceipt(false);
+    }
+  };
+
+  const handleReceiptConfirm = async (transaction: Omit<Transaction, 'id'>) => {
+    setIsCreatingFromReceipt(true);
+    setError(null);
+
+    try {
+      const created = await api.createTransaction(transaction);
+      setTransactions(prev => [created, ...prev]);
+      
+      // Reset receipt flow
+      setParsedData(null);
+      setViewMode('form');
+    } catch (err: any) {
+      console.error('Failed to create expense from receipt:', err);
+      setError('Failed to create expense');
+    } finally {
+      setIsCreatingFromReceipt(false);
+    }
+  };
+
+  const handleReceiptCancel = () => {
+    setParsedData(null);
+    setViewMode('form');
+    setError(null);
   };
 
   // Filter transactions
@@ -157,77 +224,131 @@ const Expenses: React.FC = () => {
 
       {/* Add New Expense Form */}
       <div className="card">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">{t('common.addNewExpense')}</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div>
-              <label htmlFor="amount" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                {t('common.amount')}
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                id="amount"
-                value={newExpense.amount}
-                onChange={(e) => setNewExpense({...newExpense, amount: e.target.value})}
-                className="input-field"
-                placeholder="0.00"
-                required
-              />
-            </div>
-            <div>
-              <label htmlFor="category" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                {t('common.category')}
-              </label>
-              <select
-                id="category"
-                value={newExpense.category}
-                onChange={(e) => setNewExpense({...newExpense, category: e.target.value})}
-                className="input-field"
-                required
-              >
-                <option value="">{t('common.selectCategory')}</option>
-                {EXPENSE_CATEGORIES.map(cat => (
-                  <option key={cat.name} value={cat.name}>{cat.icon} {cat.name}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                {t('common.description')}
-              </label>
-              <input
-                type="text"
-                id="description"
-                value={newExpense.description}
-                onChange={(e) => setNewExpense({...newExpense, description: e.target.value})}
-                className="input-field"
-                placeholder={t('common.whatDidYouBuy')}
-                required
-              />
-            </div>
-            <div>
-              <label htmlFor="date" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                {t('common.date')}
-              </label>
-              <input
-                type="date"
-                id="date"
-                value={newExpense.date}
-                onChange={(e) => setNewExpense({...newExpense, date: e.target.value})}
-                className="input-field"
-                required
-              />
-            </div>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+            {t('common.addNewExpense')}
+          </h2>
+          <div className="flex space-x-2">
+            <button
+              type="button"
+              onClick={() => setViewMode('form')}
+              className={`px-3 py-2 text-sm rounded-lg transition-colors ${
+                viewMode === 'form'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+              }`}
+            >
+              <MdAdd className="inline mr-1" />
+              {t('receipts.manualEntry')}
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('receipt-upload')}
+              className={`px-3 py-2 text-sm rounded-lg transition-colors ${
+                viewMode === 'receipt-upload'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+              }`}
+            >
+              <MdReceipt className="inline mr-1" />
+              {t('receipts.scanReceipt')}
+            </button>
           </div>
-          <button
-            type="submit"
-            className="btn-primary"
-          >
-            <MdAdd className="mr-2" />
-            {t('common.add')} Expense
-          </button>
-        </form>
+        </div>
+
+        {/* Manual Form */}
+        {viewMode === 'form' && (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div>
+                <label htmlFor="amount" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t('common.amount')}
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  id="amount"
+                  value={newExpense.amount}
+                  onChange={(e) => setNewExpense({...newExpense, amount: e.target.value})}
+                  className="input-field"
+                  placeholder="0.00"
+                  required
+                />
+              </div>
+              <div>
+                <label htmlFor="category" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t('common.category')}
+                </label>
+                <select
+                  id="category"
+                  value={newExpense.category}
+                  onChange={(e) => setNewExpense({...newExpense, category: e.target.value})}
+                  className="input-field"
+                  required
+                >
+                  <option value="">{t('common.selectCategory')}</option>
+                  {EXPENSE_CATEGORIES.map(cat => (
+                    <option key={cat.name} value={cat.name}>{cat.icon} {cat.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t('common.description')}
+                </label>
+                <input
+                  type="text"
+                  id="description"
+                  value={newExpense.description}
+                  onChange={(e) => setNewExpense({...newExpense, description: e.target.value})}
+                  className="input-field"
+                  placeholder={t('common.whatDidYouBuy')}
+                  required
+                />
+              </div>
+              <div>
+                <label htmlFor="date" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t('common.date')}
+                </label>
+                <input
+                  type="date"
+                  id="date"
+                  value={newExpense.date}
+                  onChange={(e) => setNewExpense({...newExpense, date: e.target.value})}
+                  className="input-field"
+                  required
+                />
+              </div>
+            </div>
+            <button
+              type="submit"
+              className="btn-primary"
+            >
+              <MdAdd className="mr-2" />
+              {t('common.add')} Expense
+            </button>
+          </form>
+        )}
+
+        {/* Receipt Upload */}
+        {viewMode === 'receipt-upload' && (
+          <ReceiptUpload
+            onFileSelect={handleReceiptUpload}
+            isProcessing={isProcessingReceipt}
+            error={error}
+            onCancel={() => setViewMode('form')}
+          />
+        )}
+
+        {/* Receipt Parser */}
+        {viewMode === 'receipt-parse' && parsedData && (
+          <ReceiptParser
+            parsedData={parsedData}
+            onConfirm={handleReceiptConfirm}
+            onCancel={handleReceiptCancel}
+            isCreating={isCreatingFromReceipt}
+          />
+        )}
       </div>
 
       {/* Filter Section */}

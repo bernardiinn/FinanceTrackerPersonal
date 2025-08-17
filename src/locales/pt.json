@@ -216,7 +216,10 @@
     "lastNameOptional": "Sobrenome (opcional)",
     "switchToDarkMode": "Mudar para modo escuro",
     "negativeCashFlow": "Fluxo de caixa negativo",
-    "createPassword": "Crie uma senha (mín. 6 caracteres)"
+    "createPassword": "Crie uma senha (mín. 6 caracteres)",
+    "merchant": "Comerciante",
+    "clear": "Limpar",
+    "creating": "Criando..."
   },
   "errors": {
     "failedToLoad": "Falha ao carregar",
@@ -245,5 +248,32 @@
     "failedToCreateRecurring": "Falha ao criar transação recorrente",
     "failedToUpdateRecurring": "Falha ao atualizar transação recorrente",
     "failedToDeleteRecurring": "Falha ao excluir transação recorrente"
+  },
+  "receipts": {
+    "uploadReceipt": "Enviar Recibo",
+    "scanReceipt": "Escanear Recibo",
+    "manualEntry": "Entrada Manual",
+    "dropOrSelect": "Solte uma imagem de recibo aqui ou clique para selecionar",
+    "supportedFormats": "Suporta JPG, PNG, WebP (máx 10MB)",
+    "selectFile": "Selecionar Arquivo",
+    "processing": "Processando...",
+    "parseReceipt": "Analisar Recibo",
+    "clear": "Limpar",
+    "parsedData": "Dados do Recibo Analisado",
+    "extractedInfo": "Informações Extraídas",
+    "notDetected": "Não detectado",
+    "otherAmounts": "Outros valores encontrados",
+    "showRawText": "Mostrar texto OCR bruto",
+    "hideRawText": "Ocultar texto OCR bruto",
+    "reviewAndEdit": "Revisar e Editar",
+    "merchantOrDescription": "Comerciante ou descrição",
+    "createExpense": "Criar Despesa",
+    "merchant": "Comerciante",
+    "tips": {
+      "header": "Dicas para melhores resultados OCR",
+      "clear": "Certifique-se de que o recibo esteja claro e bem iluminado",
+      "straight": "Mantenha o recibo reto e plano",
+      "lighting": "Evite sombras e reflexos"
+    }
   }
 }

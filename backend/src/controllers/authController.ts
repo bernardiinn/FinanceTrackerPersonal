@@ -3,7 +3,6 @@ import 'express-session';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { runQuery, getQuery, allQuery } from '../database';
-// Import type solely to keep augmentation reference (avoid unused removal warning suppression)
 
 // Session shape is globally augmented in src/types/session.d.ts
 
@@ -106,6 +105,11 @@ export const login = async (req: Request, res: Response): Promise<void> => {
   // Remove password from user object (omit password when constructing response)
   // Omit password when constructing response (no variable needed)
 
+    // Regenerate session to prevent fixation
+    await new Promise<void>((resolve, reject) => {
+      req.session.regenerate((err) => (err ? reject(err) : resolve()));
+    });
+
     // Set session with extended duration if rememberMe is true
     if (rememberMe) {
       req.session.cookie.maxAge = 1000 * 60 * 60 * 24 * 30; // 30 days
@@ -136,6 +140,14 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       secure: secureCookies
     });
 
+    // Audit
+    try {
+      await runQuery(
+        'INSERT INTO auth_audit (user_id, event_type, success, ip, user_agent) VALUES (?, ?, ?, ?, ?)',
+        [user.id, 'password_login', 1, (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || '', req.headers['user-agent'] || '']
+      );
+    } catch {}
+
     res.json({
       message: 'Login successful',
       user: {
@@ -155,7 +167,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
 export const logout = async (req: Request, res: Response): Promise<void> => {
   try {
-    req.session.destroy((err) => {
+  req.session.destroy((err) => {
       if (err) {
         console.error('Error destroying session:', err);
         res.status(500).json({ error: 'Failed to logout' });
@@ -246,17 +258,20 @@ export const setupPin = async (req: Request, res: Response): Promise<void> => {
 // Login with PIN
 export const loginWithPin = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { pin, deviceFingerprint }: { pin: string; deviceFingerprint: string } = req.body;
+  const { pin, deviceFingerprint }: { pin: string; deviceFingerprint: string } = req.body;
 
     if (!pin || !deviceFingerprint) {
       res.status(400).json({ error: 'PIN and device fingerprint are required' });
       return;
     }
 
+    // Hash the provided device fingerprint before any DB lookup
+    const deviceHash = crypto.createHash('sha256').update(deviceFingerprint).digest('hex');
+
     // Check if device is trusted
     const trustedDevice = await getQuery(
       'SELECT user_id FROM trusted_devices WHERE device_fingerprint = ? AND expires_at > datetime("now")',
-      [deviceFingerprint]
+      [deviceHash]
     );
 
     if (!trustedDevice) {
@@ -264,7 +279,7 @@ export const loginWithPin = async (req: Request, res: Response): Promise<void> =
       return;
     }
 
-    // Get user with PIN
+  // Get user with PIN
     const user = await getQuery(
       'SELECT id, email, first_name, last_name, pin_hash, pin_enabled FROM users WHERE id = ? AND pin_enabled = 1',
       [trustedDevice.user_id]
@@ -275,18 +290,61 @@ export const loginWithPin = async (req: Request, res: Response): Promise<void> =
       return;
     }
 
+    // Per-user/per-device PIN attempt tracking and lockout
+    const attemptRow = await getQuery(
+      'SELECT attempts, locked_until FROM pin_attempts WHERE user_id = ? AND device_fingerprint = ?',
+      [user.id, deviceHash]
+    );
+    if (attemptRow?.locked_until && new Date(attemptRow.locked_until) > new Date()) {
+      res.status(429).json({ error: 'Too many invalid attempts. Try again later.' });
+      return;
+    }
+
     // Verify PIN
     const isValidPin = await bcrypt.compare(pin, user.pin_hash);
     if (!isValidPin) {
+      const attempts = (attemptRow?.attempts || 0) + 1;
+      let lockedUntil: string | null = null;
+      // Lock after 5 attempts for 15 minutes
+      if (attempts >= 5) {
+        const d = new Date(Date.now() + 15 * 60 * 1000);
+        lockedUntil = d.toISOString();
+      }
+      await runQuery(
+        `INSERT INTO pin_attempts (user_id, device_fingerprint, attempts, last_attempt, locked_until)
+         VALUES (?, ?, ?, datetime('now'), ?)
+         ON CONFLICT(user_id, device_fingerprint) DO UPDATE SET attempts=excluded.attempts, last_attempt=excluded.last_attempt, locked_until=excluded.locked_until`,
+        [user.id, deviceHash, attempts, lockedUntil]
+      );
+      // Audit
+      try {
+        await runQuery(
+          'INSERT INTO auth_audit (user_id, event_type, success, ip, user_agent) VALUES (?, ?, ?, ?, ?)',
+          [user.id, 'pin_login', 0, (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || '', req.headers['user-agent'] || '']
+        );
+      } catch {}
       res.status(401).json({ error: 'Invalid PIN' });
       return;
     }
 
+    // Reset attempts on success
+    await runQuery(
+      `INSERT INTO pin_attempts (user_id, device_fingerprint, attempts, last_attempt, locked_until)
+       VALUES (?, ?, 0, datetime('now'), NULL)
+       ON CONFLICT(user_id, device_fingerprint) DO UPDATE SET attempts=0, last_attempt=datetime('now'), locked_until=NULL`,
+      [user.id, deviceHash]
+    );
+
     // Update device last used
     await runQuery(
       'UPDATE trusted_devices SET last_used = datetime("now") WHERE device_fingerprint = ?',
-      [deviceFingerprint]
+      [deviceHash]
     );
+
+    // Regenerate session to prevent fixation
+    await new Promise<void>((resolve, reject) => {
+      req.session.regenerate((err) => (err ? reject(err) : resolve()));
+    });
 
     // Set session
   (req.session as any).userId = user.id;
@@ -297,6 +355,14 @@ export const loginWithPin = async (req: Request, res: Response): Promise<void> =
       last_name: user.last_name,
       pinEnabled: true
     };
+
+    // Audit
+    try {
+      await runQuery(
+        'INSERT INTO auth_audit (user_id, event_type, success, ip, user_agent) VALUES (?, ?, ?, ?, ?)',
+        [user.id, 'pin_login', 1, (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || '', req.headers['user-agent'] || '']
+      );
+    } catch {}
 
     res.json({
       message: 'PIN login successful',
@@ -318,7 +384,7 @@ export const loginWithPin = async (req: Request, res: Response): Promise<void> =
 export const trustDevice = async (req: Request, res: Response): Promise<void> => {
   try {
     const { deviceFingerprint, deviceName }: { deviceFingerprint: string; deviceName?: string } = req.body;
-  const userId = (req.session as any).userId;
+    const userId = (req.session as any).userId;
 
     if (!userId) {
       res.status(401).json({ error: 'Not authenticated' });
@@ -334,12 +400,15 @@ export const trustDevice = async (req: Request, res: Response): Promise<void> =>
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 30);
 
+    // Hash fingerprint before storing
+    const deviceHash = crypto.createHash('sha256').update(deviceFingerprint).digest('hex');
+
     // Add or update trusted device
     await runQuery(
       `INSERT OR REPLACE INTO trusted_devices 
        (user_id, device_fingerprint, device_name, last_used, created_at, expires_at) 
        VALUES (?, ?, ?, datetime("now"), datetime("now"), ?)`,
-      [userId, deviceFingerprint, deviceName || 'Unknown Device', expiresAt.toISOString()]
+      [userId, deviceHash, deviceName || 'Unknown Device', expiresAt.toISOString()]
     );
 
     res.json({ message: 'Device trusted successfully' });

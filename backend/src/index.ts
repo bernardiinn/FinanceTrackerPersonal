@@ -3,13 +3,16 @@ import cors from 'cors';
 import session from 'express-session';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
+import crypto from 'crypto';
 import { initializeDatabase } from './database';
 import transactionRoutes from './routes/transactions';
 import authRoutes from './routes/auth';
 import goalRoutes from './routes/goals';
 import loanRoutes from './routes/loans';
 import recurringTransactionRoutes from './routes/recurringTransactions';
+import receiptRoutes from './routes/receipts';
 import { xsrfTokenIssuer, csrfProtector } from './middleware/security';
+import { runQuery } from './database';
 
 // Load .env only outside production so systemd EnvironmentFile takes precedence
 if (process.env.NODE_ENV !== 'production' && !process.env.ENV_FILE) {
@@ -29,7 +32,6 @@ const ORIGINS = (process.env.CORS_ORIGIN || 'http://0.0.0.0:4173')
 if (process.env.TRUST_PROXY === '1') {
   app.set('trust proxy', 1);
 }
-
 app.use(session({
   secret: process.env.SESSION_SECRET || 'dev-insecure-session-secret',
   resave: false,
@@ -74,6 +76,7 @@ app.use('/api/transactions', transactionRoutes);
 app.use('/api/goals', goalRoutes);
 app.use('/api/loans', loanRoutes);
 app.use('/api/recurring-transactions', recurringTransactionRoutes);
+app.use('/api/receipts', receiptRoutes);
 
 // Health
 app.get('/api/health', (_req, res) => {
@@ -98,6 +101,18 @@ const startServer = async (): Promise<void> => {
       console.log(`Server listening on http://0.0.0.0:${PORT}`);
       console.log(`Health: http://0.0.0.0:${PORT}/api/health`);
     });
+
+    // Periodic cleanup for expired trusted devices and stale lockouts (every 6 hours)
+    const sixHours = 1000 * 60 * 60 * 6;
+    setInterval(async () => {
+      try {
+        await runQuery('DELETE FROM trusted_devices WHERE expires_at <= datetime("now")');
+        await runQuery('DELETE FROM pin_attempts WHERE locked_until IS NOT NULL AND locked_until <= datetime("now")');
+        console.log('[cleanup] expired devices and lockouts cleaned');
+      } catch (e) {
+        console.error('[cleanup] error:', e);
+      }
+    }, sixHours);
   } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);

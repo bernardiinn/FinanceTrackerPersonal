@@ -324,6 +324,62 @@ export const api = {
       throw new Error('Failed to delete recurring transaction');
     }
   },
+
+  // Receipt OCR
+  async parseReceipt(file: File): Promise<{
+    success: boolean;
+    data?: {
+      merchant: string | null;
+      total: number | null;
+      date: string | null;
+      raw_text: string;
+      suggestions: {
+        all_amounts: number[];
+      };
+    };
+    error?: string;
+    details?: string;
+  }> {
+    const formData = new FormData();
+    formData.append('receipt', file);
+
+    const xsrfToken = getXsrfToken();
+    const headers: Record<string,string> = {};
+    if (xsrfToken) headers['X-XSRF-TOKEN'] = xsrfToken;
+    const response = await fetch(`${API_BASE_URL}/receipts/parse`, {
+      method: 'POST',
+      credentials: 'include',
+      headers,
+      body: formData, // Don't set Content-Type header, let browser set it with boundary
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Failed to parse receipt' }));
+      throw new Error(errorData.error || 'Failed to parse receipt');
+    }
+
+    return response.json();
+  },
+
+  async checkOcrHealth(): Promise<{
+    ocr_ready: boolean;
+    script_exists: boolean;
+    python_available: boolean;
+    packages_available: boolean;
+    requirements: string[];
+  }> {
+    const response = await fetch(`${API_BASE_URL}/receipts/health`, {
+      method: 'GET',
+      credentials: 'include',
+      headers: createHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to check OCR health');
+    }
+
+    return response.json();
+  },
 };
 
 export default api;

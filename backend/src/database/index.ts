@@ -1,5 +1,6 @@
 import sqlite3 from 'sqlite3';
 import path from 'path';
+import crypto from 'crypto';
 
 const dbPath = path.join(__dirname, '../../finance.db');
 
@@ -82,6 +83,25 @@ const migrateExistingTables = (onSuccess: () => void, onError: (err: Error) => v
   });
 };
 
+// Migrate existing trusted device fingerprints to hashed values if they aren't already SHA-256
+const migrateTrustedDeviceFingerprints = (): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    db.all('SELECT id, device_fingerprint FROM trusted_devices', async (err, rows: Array<{ id: number; device_fingerprint: string }>) => {
+      if (err) return reject(err);
+      const toUpdate = rows?.filter((r) => !(typeof r.device_fingerprint === 'string' && /^[a-f0-9]{64}$/i.test(r.device_fingerprint))) || [];
+      if (toUpdate.length === 0) return resolve();
+      db.serialize(() => {
+        const stmt = db.prepare('UPDATE trusted_devices SET device_fingerprint = ? WHERE id = ?');
+        for (const r of toUpdate) {
+          const hash = crypto.createHash('sha256').update(String(r.device_fingerprint)).digest('hex');
+          stmt.run([hash, r.id]);
+        }
+        stmt.finalize((e) => (e ? reject(e) : resolve()));
+      });
+    });
+  });
+};
+
 export const initializeDatabase = (): Promise<void> => {
   return new Promise((resolve, reject) => {
     db.serialize(() => {
@@ -114,6 +134,9 @@ export const initializeDatabase = (): Promise<void> => {
           UNIQUE(user_id, device_fingerprint)
         )
       `);
+  // Helpful indexes
+  db.run(`CREATE INDEX IF NOT EXISTS idx_trusted_devices_user ON trusted_devices(user_id)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_trusted_devices_fp ON trusted_devices(device_fingerprint)`);
 
       // Create accounts table with user_id
       db.run(`
@@ -199,10 +222,38 @@ export const initializeDatabase = (): Promise<void> => {
         )
       `);
 
+      // Create table to track PIN attempts and lockouts
+      db.run(`
+        CREATE TABLE IF NOT EXISTS pin_attempts (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          device_fingerprint TEXT NOT NULL,
+          attempts INTEGER NOT NULL DEFAULT 0,
+          last_attempt DATETIME DEFAULT CURRENT_TIMESTAMP,
+          locked_until DATETIME,
+          UNIQUE(user_id, device_fingerprint),
+          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+        )
+      `);
+
+      // Create simple auth audit table
+      db.run(`
+        CREATE TABLE IF NOT EXISTS auth_audit (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER,
+          event_type TEXT NOT NULL,
+          success BOOLEAN NOT NULL,
+          ip TEXT,
+          user_agent TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
       // Add migration function to add user_id to existing tables
       migrateExistingTables(() => {
         // Run PIN support migration
         migratePinSupport()
+          .then(() => migrateTrustedDeviceFingerprints())
           .then(() => {
             console.log('Database tables initialized successfully.');
             resolve();

@@ -1,7 +1,34 @@
 import type { User, AuthResponse } from '../types';
-import { withCsrf } from './csrf.ts';
 
 const API_BASE_URL = '/api/auth';
+
+// Helper to get XSRF token from cookies
+const getXsrfToken = (): string | undefined => {
+  if (typeof document === 'undefined') return undefined;
+  
+  const cookies = document.cookie.split(';');
+  for (const cookie of cookies) {
+    const [name, value] = cookie.trim().split('=');
+    if (name === 'XSRF-TOKEN') {
+      return decodeURIComponent(value);
+    }
+  }
+  return undefined;
+};
+
+// Create headers with XSRF token
+const createHeaders = (): Record<string, string> => {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json'
+  };
+  
+  const token = getXsrfToken();
+  if (token) {
+    headers['X-XSRF-TOKEN'] = token;
+  }
+  
+  return headers;
+};
 
 // API configuration for authenticated requests
 const apiConfig = {
@@ -21,8 +48,8 @@ export const authService = {
   }): Promise<AuthResponse> {
     const response = await fetch(`${API_BASE_URL}/signup`, {
       method: 'POST',
-  ...apiConfig,
-  headers: await withCsrf(apiConfig.headers),
+      credentials: 'include',
+      headers: createHeaders(),
       body: JSON.stringify(userData),
     });
 
@@ -42,8 +69,8 @@ export const authService = {
   }): Promise<AuthResponse> {
     const response = await fetch(`${API_BASE_URL}/login`, {
       method: 'POST',
-  ...apiConfig,
-  headers: await withCsrf(apiConfig.headers),
+      credentials: 'include',
+      headers: createHeaders(),
       body: JSON.stringify(credentials),
     });
 
@@ -59,8 +86,8 @@ export const authService = {
   async logout(): Promise<{ message: string }> {
     const response = await fetch(`${API_BASE_URL}/logout`, {
       method: 'POST',
-  ...apiConfig,
-  headers: await withCsrf(apiConfig.headers),
+      credentials: 'include',
+      headers: createHeaders(),
     });
 
     if (!response.ok) {
@@ -100,8 +127,8 @@ export const authService = {
   async setupPin(pin: string): Promise<{ message: string }> {
     const response = await fetch(`${API_BASE_URL}/setup-pin`, {
       method: 'POST',
-  ...apiConfig,
-  headers: await withCsrf(apiConfig.headers),
+      credentials: 'include',
+      headers: createHeaders(),
       body: JSON.stringify({ pin }),
     });
 
@@ -117,8 +144,8 @@ export const authService = {
   async loginWithPin(pin: string, deviceFingerprint: string): Promise<AuthResponse> {
     const response = await fetch(`${API_BASE_URL}/login-pin`, {
       method: 'POST',
-  ...apiConfig,
-  headers: await withCsrf(apiConfig.headers),
+      credentials: 'include',
+      headers: createHeaders(),
       body: JSON.stringify({ pin, deviceFingerprint }),
     });
 
@@ -134,8 +161,8 @@ export const authService = {
   async trustDevice(deviceFingerprint: string, deviceName?: string): Promise<{ message: string }> {
     const response = await fetch(`${API_BASE_URL}/trust-device`, {
       method: 'POST',
-  ...apiConfig,
-  headers: await withCsrf(apiConfig.headers),
+      credentials: 'include',
+      headers: createHeaders(),
       body: JSON.stringify({ deviceFingerprint, deviceName }),
     });
 
@@ -166,8 +193,8 @@ export const authService = {
   async removeTrustedDevice(deviceId: number): Promise<{ message: string }> {
     const response = await fetch(`${API_BASE_URL}/remove-device`, {
       method: 'POST',
-  ...apiConfig,
-  headers: await withCsrf(apiConfig.headers),
+      credentials: 'include',
+      headers: createHeaders(),
       body: JSON.stringify({ deviceId }),
     });
 
@@ -183,8 +210,8 @@ export const authService = {
   async disablePin(): Promise<{ message: string }> {
     const response = await fetch(`${API_BASE_URL}/disable-pin`, {
       method: 'POST',
-  ...apiConfig,
-  headers: await withCsrf(apiConfig.headers),
+      credentials: 'include',
+      headers: createHeaders(),
     });
 
     if (!response.ok) {

@@ -2,12 +2,32 @@ import type { Transaction, Account, Goal, Loan, RecurringTransaction, DashboardS
 
 const API_BASE_URL = '/api';
 
-// API configuration for authenticated requests
-const apiConfig = {
-  credentials: 'include' as const,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+// Helper to get XSRF token from cookies
+const getXsrfToken = (): string | undefined => {
+  if (typeof document === 'undefined') return undefined;
+  
+  const cookies = document.cookie.split(';');
+  for (const cookie of cookies) {
+    const [name, value] = cookie.trim().split('=');
+    if (name === 'XSRF-TOKEN') {
+      return decodeURIComponent(value);
+    }
+  }
+  return undefined;
+};
+
+// Create headers with XSRF token
+const createHeaders = (contentType = 'application/json'): Record<string, string> => {
+  const headers: Record<string, string> = {
+    'Content-Type': contentType
+  };
+  
+  const token = getXsrfToken();
+  if (token) {
+    headers['X-XSRF-TOKEN'] = token;
+  }
+  
+  return headers;
 };
 
 // Real API functions connected to backend
@@ -63,7 +83,8 @@ export const api = {
 
     const response = await fetch(url.toString(), {
       method: 'GET',
-      ...apiConfig,
+      credentials: 'include',
+      headers: createHeaders(),
     });
 
     if (!response.ok) {
@@ -76,7 +97,8 @@ export const api = {
   async createTransaction(transaction: Omit<Transaction, 'id'>): Promise<Transaction> {
     const response = await fetch(`${API_BASE_URL}/transactions`, {
       method: 'POST',
-      ...apiConfig,
+      credentials: 'include',
+      headers: createHeaders(),
       body: JSON.stringify(transaction),
     });
 
@@ -90,7 +112,8 @@ export const api = {
   async updateTransaction(id: string, transaction: Partial<Transaction>): Promise<Transaction> {
     const response = await fetch(`${API_BASE_URL}/transactions/${id}`, {
       method: 'PUT',
-      ...apiConfig,
+      credentials: 'include',
+      headers: createHeaders(),
       body: JSON.stringify(transaction),
     });
 
@@ -104,7 +127,8 @@ export const api = {
   async deleteTransaction(id: string): Promise<void> {
     const response = await fetch(`${API_BASE_URL}/transactions/${id}`, {
       method: 'DELETE',
-      ...apiConfig,
+      credentials: 'include',
+      headers: createHeaders(),
     });
 
     if (!response.ok) {
@@ -116,7 +140,8 @@ export const api = {
   async getAccounts(): Promise<Account[]> {
     const response = await fetch(`${API_BASE_URL}/accounts`, {
       method: 'GET',
-      ...apiConfig,
+      credentials: 'include',
+      headers: createHeaders(),
     });
 
     if (!response.ok) {
@@ -129,7 +154,8 @@ export const api = {
   async createAccount(account: Omit<Account, 'id'>): Promise<Account> {
     const response = await fetch(`${API_BASE_URL}/accounts`, {
       method: 'POST',
-      ...apiConfig,
+      credentials: 'include',
+      headers: createHeaders(),
       body: JSON.stringify(account),
     });
 
@@ -144,7 +170,8 @@ export const api = {
   async getGoals(): Promise<Goal[]> {
     const response = await fetch(`${API_BASE_URL}/goals`, {
       method: 'GET',
-      ...apiConfig,
+      credentials: 'include',
+      headers: createHeaders(),
     });
 
     if (!response.ok) {
@@ -157,7 +184,8 @@ export const api = {
   async createGoal(goal: Omit<Goal, 'id'>): Promise<Goal> {
     const response = await fetch(`${API_BASE_URL}/goals`, {
       method: 'POST',
-      ...apiConfig,
+      credentials: 'include',
+      headers: createHeaders(),
       body: JSON.stringify(goal),
     });
 
@@ -171,7 +199,8 @@ export const api = {
   async updateGoal(id: string, goal: Partial<Goal>): Promise<Goal> {
     const response = await fetch(`${API_BASE_URL}/goals/${id}`, {
       method: 'PUT',
-      ...apiConfig,
+      credentials: 'include',
+      headers: createHeaders(),
       body: JSON.stringify(goal),
     });
 
@@ -186,7 +215,8 @@ export const api = {
   async getLoans(): Promise<Loan[]> {
     const response = await fetch(`${API_BASE_URL}/loans`, {
       method: 'GET',
-      ...apiConfig,
+      credentials: 'include',
+      headers: createHeaders(),
     });
 
     if (!response.ok) {
@@ -199,7 +229,8 @@ export const api = {
   async createLoan(loan: Omit<Loan, 'id'>): Promise<Loan> {
     const response = await fetch(`${API_BASE_URL}/loans`, {
       method: 'POST',
-      ...apiConfig,
+      credentials: 'include',
+      headers: createHeaders(),
       body: JSON.stringify(loan),
     });
 
@@ -213,7 +244,8 @@ export const api = {
   async updateLoan(id: string, loan: Partial<Loan>): Promise<Loan> {
     const response = await fetch(`${API_BASE_URL}/loans/${id}`, {
       method: 'PUT',
-      ...apiConfig,
+      credentials: 'include',
+      headers: createHeaders(),
       body: JSON.stringify(loan),
     });
 
@@ -227,7 +259,8 @@ export const api = {
   async deleteLoan(id: string): Promise<void> {
     const response = await fetch(`${API_BASE_URL}/loans/${id}`, {
       method: 'DELETE',
-      ...apiConfig,
+      credentials: 'include',
+      headers: createHeaders(),
     });
 
     if (!response.ok) {
@@ -239,7 +272,8 @@ export const api = {
   async getRecurringTransactions(): Promise<RecurringTransaction[]> {
     const response = await fetch(`${API_BASE_URL}/recurring-transactions`, {
       method: 'GET',
-      ...apiConfig,
+      credentials: 'include',
+      headers: createHeaders(),
     });
 
     if (!response.ok) {
@@ -252,7 +286,8 @@ export const api = {
   async createRecurringTransaction(transaction: Omit<RecurringTransaction, 'id'>): Promise<RecurringTransaction> {
     const response = await fetch(`${API_BASE_URL}/recurring-transactions`, {
       method: 'POST',
-      ...apiConfig,
+      credentials: 'include',
+      headers: createHeaders(),
       body: JSON.stringify(transaction),
     });
 
@@ -266,7 +301,8 @@ export const api = {
   async updateRecurringTransaction(id: string, transaction: Partial<RecurringTransaction>): Promise<RecurringTransaction> {
     const response = await fetch(`${API_BASE_URL}/recurring-transactions/${id}`, {
       method: 'PUT',
-      ...apiConfig,
+      credentials: 'include',
+      headers: createHeaders(),
       body: JSON.stringify(transaction),
     });
 
@@ -280,7 +316,8 @@ export const api = {
   async deleteRecurringTransaction(id: string): Promise<void> {
     const response = await fetch(`${API_BASE_URL}/recurring-transactions/${id}`, {
       method: 'DELETE',
-      ...apiConfig,
+      credentials: 'include',
+      headers: createHeaders(),
     });
 
     if (!response.ok) {

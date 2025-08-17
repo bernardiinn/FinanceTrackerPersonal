@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import 'express-session';
 
 // Extend Express Request to include user information
 declare global {
@@ -16,23 +17,24 @@ declare global {
 }
 
 export const requireAuth = (req: Request, res: Response, next: NextFunction): void => {
-  if (!req.session.userId) {
+  const sess: any = req.session; // fallback casting if augmentation not picked up yet
+  if (!sess || !sess.userId) {
     res.status(401).json({ error: 'Authentication required' });
     return;
   }
 
   // Add user information to request object for easy access
-  req.userId = req.session.userId;
-  req.user = req.session.user;
+  req.userId = sess.userId;
+  req.user = sess.user;
   
   next();
 };
 
 export const optionalAuth = (req: Request, _res: Response, next: NextFunction): void => {
-  // Set user information if available, but don't require it
-  if (req.session.userId) {
-    req.userId = req.session.userId;
-    req.user = req.session.user;
+  const sess: any = req.session;
+  if (sess && sess.userId) {
+    req.userId = sess.userId;
+    req.user = sess.user;
   }
   
   next();

@@ -2,6 +2,34 @@ import type { User, AuthResponse } from '../types';
 
 const API_BASE_URL = '/api/auth';
 
+// Helper to get XSRF token from cookies
+const getXsrfToken = (): string | undefined => {
+  if (typeof document === 'undefined') return undefined;
+  
+  const cookies = document.cookie.split(';');
+  for (const cookie of cookies) {
+    const [name, value] = cookie.trim().split('=');
+    if (name === 'XSRF-TOKEN') {
+      return decodeURIComponent(value);
+    }
+  }
+  return undefined;
+};
+
+// Create headers with XSRF token
+const createHeaders = (): Record<string, string> => {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json'
+  };
+  
+  const token = getXsrfToken();
+  if (token) {
+    headers['X-XSRF-TOKEN'] = token;
+  }
+  
+  return headers;
+};
+
 // API configuration for authenticated requests
 const apiConfig = {
   credentials: 'include' as const,
@@ -40,7 +68,8 @@ export const authService = {
   }): Promise<AuthResponse> {
     const response = await fetch(`${API_BASE_URL}/login`, {
       method: 'POST',
-      ...apiConfig,
+      credentials: 'include',
+      headers: createHeaders(),
       body: JSON.stringify(credentials),
     });
 

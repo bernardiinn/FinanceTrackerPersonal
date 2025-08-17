@@ -1,15 +1,20 @@
 import { Request, Response } from 'express';
+import 'express-session';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import { runQuery, getQuery, allQuery } from '../database';
-import { User } from '../models/types';
+// Import type solely to keep augmentation reference (avoid unused removal warning suppression)
 
-// Extend Express Session to include user
-declare module 'express-session' {
-  interface SessionData {
-    userId?: number;
-    user?: Omit<User, 'password'>;
+// Session shape is globally augmented in src/types/session.d.ts
+
+// Helper to ensure a csrf token exists on session (avoid TS property complaints if augmentation not picked up)
+const ensureCsrfToken = (req: Request): string => {
+  const s: any = req.session; // fallback any to avoid compile failure if augmentation race
+  if (!s.csrfToken) {
+    s.csrfToken = crypto.randomBytes(16).toString('hex');
   }
-}
+  return s.csrfToken as string;
+};
 
 export const signup = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -54,8 +59,8 @@ export const signup = async (req: Request, res: Response): Promise<void> => {
     );
 
     // Set session
-    req.session.userId = newUser.id;
-    req.session.user = newUser;
+  (req.session as any).userId = newUser.id;
+  (req.session as any).user = newUser;
 
     res.status(201).json({
       message: 'User created successfully',
@@ -98,8 +103,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Remove password from user object
-    const { password: _, pin_hash, ...userWithoutPassword } = user;
+  // Remove password from user object (omit password when constructing response)
+  // Omit password when constructing response (no variable needed)
 
     // Set session with extended duration if rememberMe is true
     if (rememberMe) {
@@ -107,13 +112,41 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     }
 
     // Set session
-    req.session.userId = user.id;
-    req.session.user = { ...userWithoutPassword, pinEnabled: !!user.pin_enabled };
+  (req.session as any).userId = user.id;
+  (req.session as any).user = {
+      id: user.id,
+      email: user.email,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      pinEnabled: !!user.pin_enabled
+    };
+
+    if (req.body.rememberMe && req.session.cookie) {
+      req.session.cookie.maxAge = 1000 * 60 * 60 * 24 * 30;
+    }
+
+    // Ensure CSRF token + XSRF cookie now that session is mutated
+  const csrfToken = ensureCsrfToken(req);
+    const INSECURE = process.env.FORCE_INSECURE_COOKIES === '1';
+    const secureCookies = !INSECURE && process.env.NODE_ENV === 'production';
+  res.cookie('XSRF-TOKEN', csrfToken, {
+      path: '/',
+      httpOnly: false,
+      sameSite: 'lax',
+      secure: secureCookies
+    });
 
     res.json({
       message: 'Login successful',
-      user: { ...userWithoutPassword, pinEnabled: !!user.pin_enabled }
+      user: {
+        id: user.id,
+        email: user.email,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        pinEnabled: !!user.pin_enabled
+      }
     });
+    return;
   } catch (error) {
     console.error('Error during login:', error);
     res.status(500).json({ error: 'Failed to login' });
@@ -140,7 +173,7 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
 
 export const me = async (req: Request, res: Response): Promise<void> => {
   try {
-    if (!req.session.userId) {
+  if (!(req.session as any).userId) {
       res.status(401).json({ error: 'Not authenticated' });
       return;
     }
@@ -148,7 +181,7 @@ export const me = async (req: Request, res: Response): Promise<void> => {
     // Get fresh user data from database
     const user = await getQuery(
       'SELECT id, email, first_name, last_name, created_at FROM users WHERE id = ?',
-      [req.session.userId]
+  [(req.session as any).userId]
     );
 
     if (!user) {
@@ -165,7 +198,7 @@ export const me = async (req: Request, res: Response): Promise<void> => {
 
 // Middleware to check if user is authenticated
 export const requireAuth = (req: Request, res: Response, next: Function): void => {
-  if (!req.session.userId) {
+  if (!(req.session as any).userId) {
     res.status(401).json({ error: 'Authentication required' });
     return;
   }
@@ -182,7 +215,7 @@ export const optionalAuth = (_req: Request, _res: Response, next: Function): voi
 export const setupPin = async (req: Request, res: Response): Promise<void> => {
   try {
     const { pin }: { pin: string } = req.body;
-    const userId = req.session.userId;
+  const userId = (req.session as any).userId;
 
     if (!userId) {
       res.status(401).json({ error: 'Not authenticated' });
@@ -256,8 +289,8 @@ export const loginWithPin = async (req: Request, res: Response): Promise<void> =
     );
 
     // Set session
-    req.session.userId = user.id;
-    req.session.user = {
+  (req.session as any).userId = user.id;
+  (req.session as any).user = {
       id: user.id,
       email: user.email,
       first_name: user.first_name,
@@ -285,7 +318,7 @@ export const loginWithPin = async (req: Request, res: Response): Promise<void> =
 export const trustDevice = async (req: Request, res: Response): Promise<void> => {
   try {
     const { deviceFingerprint, deviceName }: { deviceFingerprint: string; deviceName?: string } = req.body;
-    const userId = req.session.userId;
+  const userId = (req.session as any).userId;
 
     if (!userId) {
       res.status(401).json({ error: 'Not authenticated' });
@@ -319,7 +352,7 @@ export const trustDevice = async (req: Request, res: Response): Promise<void> =>
 // Get trusted devices
 export const getTrustedDevices = async (req: Request, res: Response): Promise<void> => {
   try {
-    const userId = req.session.userId;
+  const userId = (req.session as any).userId;
 
     if (!userId) {
       res.status(401).json({ error: 'Not authenticated' });
@@ -342,7 +375,7 @@ export const getTrustedDevices = async (req: Request, res: Response): Promise<vo
 export const removeTrustedDevice = async (req: Request, res: Response): Promise<void> => {
   try {
     const { deviceId }: { deviceId: number } = req.body;
-    const userId = req.session.userId;
+  const userId = (req.session as any).userId;
 
     if (!userId) {
       res.status(401).json({ error: 'Not authenticated' });
@@ -364,7 +397,7 @@ export const removeTrustedDevice = async (req: Request, res: Response): Promise<
 // Disable PIN
 export const disablePin = async (req: Request, res: Response): Promise<void> => {
   try {
-    const userId = req.session.userId;
+  const userId = (req.session as any).userId;
 
     if (!userId) {
       res.status(401).json({ error: 'Not authenticated' });

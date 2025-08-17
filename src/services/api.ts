@@ -336,6 +336,8 @@ export const api = {
       suggestions: {
         all_amounts: number[];
       };
+  warnings?: string[];
+  vendor_raw?: string | null;
     };
     error?: string;
     details?: string;
@@ -363,10 +365,8 @@ export const api = {
 
   async checkOcrHealth(): Promise<{
     ocr_ready: boolean;
-    script_exists: boolean;
-    python_available: boolean;
-    packages_available: boolean;
-    requirements: string[];
+    engine?: string;
+    language?: string;
   }> {
     const response = await fetch(`${API_BASE_URL}/receipts/health`, {
       method: 'GET',

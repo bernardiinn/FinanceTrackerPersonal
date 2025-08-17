@@ -23,7 +23,7 @@ const PORT = process.env.PORT || 3003;
 // Determine cookie security flags (allow override to force insecure for HTTP testing)
 const INSECURE = process.env.FORCE_INSECURE_COOKIES === '1' || process.env.USE_SECURE === '0';
 const secureCookies = !INSECURE && process.env.NODE_ENV === 'production';
-const ORIGINS = (process.env.CORS_ORIGIN || 'http://0.0.0.0:4173')
+const ORIGINS = (process.env.CORS_ORIGIN || 'http://0.0.0.0:4173,http://localhost:4173')
   .split(',')
   .map(o => o.trim())
   .filter(Boolean);

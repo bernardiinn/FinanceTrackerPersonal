@@ -12,6 +12,8 @@ interface ParsedData {
   suggestions: {
     all_amounts: number[];
   };
+  warnings?: string[];
+  vendor_raw?: string | null;
 }
 
 interface ReceiptParserProps {
@@ -98,6 +100,9 @@ const ReceiptParser: React.FC<ReceiptParserProps> = ({
           <div>
             <span className="text-gray-600 dark:text-gray-400">{t('common.merchant')}:</span>
             <p className="font-medium">{parsedData.merchant || t('receipts.notDetected')}</p>
+            {parsedData.vendor_raw && parsedData.vendor_raw !== parsedData.merchant && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Raw: {parsedData.vendor_raw}</p>
+            )}
           </div>
           <div>
             <span className="text-gray-600 dark:text-gray-400">{t('common.amount')}:</span>
@@ -110,6 +115,17 @@ const ReceiptParser: React.FC<ReceiptParserProps> = ({
             <p className="font-medium">{parsedData.date || t('receipts.notDetected')}</p>
           </div>
         </div>
+
+        {parsedData.warnings && parsedData.warnings.length > 0 && (
+          <div className="mt-3 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700 rounded p-3">
+            <p className="text-xs font-medium text-yellow-800 dark:text-yellow-200 mb-1">{t('receipts.warnings')}:</p>
+            <ul className="list-disc ml-4 space-y-0.5 text-xs text-yellow-800 dark:text-yellow-200">
+              {parsedData.warnings.map((w, i) => (
+                <li key={i}>{w}</li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {/* Alternative amounts if available */}
         {parsedData.suggestions.all_amounts.length > 1 && (

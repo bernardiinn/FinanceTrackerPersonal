@@ -30,6 +30,8 @@ interface ParsedReceiptData {
   suggestions: {
     all_amounts: number[];
   };
+  warnings?: string[];
+  vendor_raw?: string | null;
 }
 
 const Expenses: React.FC = () => {

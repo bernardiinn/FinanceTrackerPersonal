@@ -269,6 +269,8 @@
     "merchantOrDescription": "Comerciante ou descrição",
     "createExpense": "Criar Despesa",
     "merchant": "Comerciante",
+  "warnings": "Avisos",
+  "rawVendor": "Comerciante bruto",
     "tips": {
       "header": "Dicas para melhores resultados OCR",
       "clear": "Certifique-se de que o recibo esteja claro e bem iluminado",

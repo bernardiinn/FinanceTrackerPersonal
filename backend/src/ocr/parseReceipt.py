@@ -9,6 +9,7 @@ import json
 import re
 import cv2
 import pytesseract
+import os
 from datetime import datetime
 from typing import Dict, Optional, List
 
@@ -38,19 +39,36 @@ def preprocess_image(image_path: str) -> any:
         return None
 
 
+def configure_tesseract() -> None:
+    """Configure tesseract command path on Windows if needed via common install locations or TESSERACT_PATH env."""
+    custom = os.environ.get("TESSERACT_PATH")
+    if custom and os.path.exists(custom):
+        pytesseract.pytesseract.tesseract_cmd = custom
+        return
+    if os.name == 'nt':  # Windows typical install paths
+        candidates = [
+            r"C:\\Program Files\\Tesseract-OCR\\tesseract.exe",
+            r"C:\\Program Files (x86)\\Tesseract-OCR\\tesseract.exe"
+        ]
+        for c in candidates:
+            if os.path.exists(c):
+                pytesseract.pytesseract.tesseract_cmd = c
+                return
+
+
 def extract_text_from_image(image_path: str) -> str:
-    """
-    Extract text from the receipt image using OCR.
-    """
+    """Extract text from the receipt image using OCR."""
+    # Ensure tesseract configured (esp. Windows)
+    configure_tesseract()
     try:
         # Preprocess the image
         processed_image = preprocess_image(image_path)
         if processed_image is None:
             return ""
-        
+
         # Configure tesseract
         custom_config = r'--oem 3 --psm 6'
-        
+
         # Extract text
         text = pytesseract.image_to_string(processed_image, config=custom_config)
         return text.strip()

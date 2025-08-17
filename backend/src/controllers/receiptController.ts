@@ -2,10 +2,8 @@ import { Request, Response } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
-import { exec } from 'child_process';
-import { promisify } from 'util';
-
-const execAsync = promisify(exec);
+// OCR via tesseract.js (Python path fully removed)
+import { parseReceiptImage, ensureOcrReady } from '../ocr/parseReceipt';
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -56,7 +54,10 @@ interface ParsedReceiptData {
   total: number | null;
   date: string | null;
   all_amounts?: number[];
+  warnings?: string[];
 }
+
+// Response interface preserved (warnings optional added downstream).
 
 export const parseReceipt = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -71,40 +72,9 @@ export const parseReceipt = async (req: Request, res: Response): Promise<void> =
       return;
     }
   const imagePath = uploaded.path;
-  const pythonScriptPath = path.join(__dirname, '../ocr/parseReceipt.py');
 
     try {
-      // Check if Python script exists
-      if (!fs.existsSync(pythonScriptPath)) {
-        throw new Error('OCR script not found');
-      }
-
-      // Execute the Python OCR script
-      // Choose python path cross-platform: prefer project .venv, else fallback to system python
-      const venvPythonUnix = path.join(__dirname, '../../../.venv/bin/python');
-      const venvPythonWin = path.join(__dirname, '..', '..', '..', '.venv', 'Scripts', 'python.exe');
-      const isWindows = process.platform === 'win32';
-      const candidate = isWindows ? venvPythonWin : venvPythonUnix;
-      const pythonPath = fs.existsSync(candidate) ? candidate : (isWindows ? 'python' : 'python3');
-
-      // Execute with timeout and hidden window on Windows
-      const { stdout, stderr } = await execAsync(`"${pythonPath}" "${pythonScriptPath}" "${imagePath}"`, {
-        timeout: 30000,
-        windowsHide: true,
-        maxBuffer: 10 * 1024 * 1024,
-      });
-      
-      if (stderr) {
-        console.warn('OCR Script stderr:', stderr);
-      }
-
-      // Parse the JSON output from Python script
-      let parsedData: ParsedReceiptData;
-      try {
-        parsedData = JSON.parse(stdout);
-      } catch (e) {
-        throw new Error('Invalid OCR output format');
-      }
+  const parsedData: ParsedReceiptData = await parseReceiptImage(imagePath);
 
       // Clean up the uploaded file
       try {
@@ -130,10 +100,8 @@ export const parseReceipt = async (req: Request, res: Response): Promise<void> =
           total: parsedData.total,
           date: parsedData.date,
           raw_text: parsedData.raw_text,
-          // Optional: include confidence indicators or alternative suggestions
-          suggestions: {
-            all_amounts: parsedData.all_amounts || [],
-          }
+          suggestions: { all_amounts: parsedData.all_amounts || [] },
+          warnings: parsedData.warnings || []
         }
       });
 
@@ -147,11 +115,11 @@ export const parseReceipt = async (req: Request, res: Response): Promise<void> =
         console.warn('Failed to cleanup uploaded file:', cleanupError);
       }
 
-      const isTimeout = execError?.killed || /ETIME|timed out/i.test(execError?.message || '');
+      const isTimeout = /ETIME|timed out/i.test(execError?.message || '');
       res.status(500).json({
         error: isTimeout ? 'OCR timed out' : 'Failed to process receipt image',
         details: execError.message,
-        suggestion: isTimeout ? 'Try a smaller or clearer image' : 'Please ensure the image is clear and contains text'
+        suggestion: isTimeout ? 'Try a smaller or clearer image' : 'Ensure image is clear and readable.'
       });
     }
 
@@ -178,38 +146,11 @@ export const parseReceipt = async (req: Request, res: Response): Promise<void> =
 // Health check endpoint to verify OCR functionality
 export const checkOcrHealth = async (_req: Request, res: Response): Promise<void> => {
   try {
-    const pythonScriptPath = path.join(__dirname, '../ocr/parseReceipt.py');
-    
-    // Check if script exists
-    const scriptExists = fs.existsSync(pythonScriptPath);
-    
-    // Check if Python and required packages are available
-    let pythonAvailable = false;
-    let packagesAvailable = false;
-    
-    try {
-      const pythonPath = path.join(__dirname, '../../../.venv/bin/python');
-      await execAsync(`"${pythonPath}" --version`);
-      pythonAvailable = true;
-      
-      // Try to import required packages
-      await execAsync(`"${pythonPath}" -c "import cv2, pytesseract; print(\\"OK\\")"`);
-      packagesAvailable = true;
-    } catch (checkError) {
-      console.warn('Python/package check failed:', checkError);
-    }
-
+    const ready = await ensureOcrReady();
     res.json({
-      ocr_ready: scriptExists && pythonAvailable && packagesAvailable,
-      script_exists: scriptExists,
-      python_available: pythonAvailable,
-      packages_available: packagesAvailable,
-      requirements: [
-        'python3',
-        'opencv-python (cv2)',
-        'pytesseract',
-        'tesseract-ocr (system package)'
-      ]
+      ocr_ready: ready,
+      engine: 'tesseract.js',
+      language: process.env.TESSERACT_LANG || 'eng'
     });
   } catch (error: any) {
     console.error('Error checking OCR health:', error);

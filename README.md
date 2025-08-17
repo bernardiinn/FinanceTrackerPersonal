@@ -63,16 +63,14 @@ A modern, full-stack personal finance management application built with React, T
 - **SQLite** - Lightweight database with .db file storage
 - **CORS** - Cross-origin resource sharing
 - **Multer** - File upload handling
-- **Python OCR** - Receipt text extraction using pytesseract and OpenCV
+- **OCR** - Receipt text extraction using tesseract.js (no Python required)
 
 ## 🚀 Getting Started
 
 ### Prerequisites
 - Node.js (v18 or higher)
 - npm or yarn
-- **Python 3.7+** (for receipt OCR functionality)
-- **Python packages**: `pytesseract`, `opencv-python`
-- **System package**: `tesseract-ocr` (OCR engine)
+- (Optional) System Tesseract install can improve accuracy; otherwise tesseract.js WASM is used automatically.
 
 ### Installation
 
@@ -94,18 +92,10 @@ A modern, full-stack personal finance management application built with React, T
    cd ..
    ```
 
-4. **Setup Python OCR dependencies**
-   ```bash
-   # Install system OCR engine (macOS with Homebrew)
-   brew install tesseract
-   
-   # Install Python packages
-   pip3 install pytesseract opencv-python
-   
-   # For other systems:
-   # Ubuntu/Debian: sudo apt-get install tesseract-ocr
-   # Windows: Download from GitHub releases or use chocolatey
-   ```
+4. (Optional) Install native Tesseract engine (improves speed/accuracy). Otherwise the bundled WASM model is used.
+   - macOS: `brew install tesseract`
+   - Ubuntu/Debian: `sudo apt-get install tesseract-ocr`
+   - Windows: Install from the UB Mannheim builds (optional)
 
 ### Development
 
@@ -208,6 +198,14 @@ The SQLite database includes the following tables:
 - `GET /api/receipts/health` - Check OCR system health
 
 ### Additional endpoints for goals, loans, and recurring transactions are available.
+
+### OCR Environment Setup Details
+
+OCR now uses pure Node via `tesseract.js`; no Python setup needed. Optional environment variables:
+- `TESSERACT_LANG` (default `eng`) to choose language.
+- `TESSDATA_PREFIX` if you supply custom traineddata files.
+
+Health: `GET /api/receipts/health` returns readiness (loads worker & language).
 
 ## 🚀 Deployment
 

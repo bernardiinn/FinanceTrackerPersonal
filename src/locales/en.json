@@ -269,6 +269,8 @@
     "merchantOrDescription": "Merchant or description",
     "createExpense": "Create Expense",
     "merchant": "Merchant",
+  "warnings": "Warnings",
+  "rawVendor": "Raw vendor",
     "tips": {
       "header": "Tips for better OCR results",
       "clear": "Ensure the receipt is clear and well-lit",

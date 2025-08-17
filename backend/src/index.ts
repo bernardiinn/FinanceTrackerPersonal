@@ -3,7 +3,6 @@ import cors from 'cors';
 import session from 'express-session';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
-import crypto from 'crypto';
 import { initializeDatabase } from './database';
 import transactionRoutes from './routes/transactions';
 import authRoutes from './routes/auth';

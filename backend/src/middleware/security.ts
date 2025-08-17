@@ -46,3 +46,32 @@ export const csrfProtector = (options: CsrfProtectorOptions = {}) => {
     next();
   };
 };
+
+// Simple in-memory rate limiting (per-IP) for login & pin attempts
+type RateBucket = { count: number; resetAt: number };
+const buckets = new Map<string, RateBucket>();
+
+const makeLimiter = (key: string, limit: number, windowMs: number) => (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
+  const bucketKey = `${key}:${ip}`;
+  const now = Date.now();
+  const data = buckets.get(bucketKey);
+  if (!data || data.resetAt <= now) {
+    buckets.set(bucketKey, { count: 1, resetAt: now + windowMs });
+    return next();
+  }
+  if (data.count < limit) {
+    data.count += 1;
+    return next();
+  }
+  const retryAfter = Math.ceil((data.resetAt - now) / 1000);
+  res.setHeader('Retry-After', String(retryAfter));
+  return res.status(429).json({ error: 'Too many attempts, please try again later.' });
+};
+
+export const limitLogin = makeLimiter('login', 10, 15 * 60 * 1000); // 10 per 15m
+export const limitPin = makeLimiter('pin', 20, 15 * 60 * 1000); // 20 per 15m
